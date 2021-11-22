@@ -172,6 +172,67 @@ class HRRN extends Scheduler{
     }
 }
 
+class SRT extends Scheduler{
+    SRT(String name) { super(name); }
+
+    @Override
+    public void schedule() {
+        super.schedule();
+        int index = 0;
+        for(int i=0; i<numOfProcess; i++) {
+            if(readyQueue.get(i).getRemainingTime() < readyQueue.get(index).getRemainingTime())    index = i;
+        }
+        try {
+            currentProcess = readyQueue.get(index);
+        }
+        catch(IndexOutOfBoundsException e)  { currentProcess = null; }
+    }
+
+    @Override
+    public boolean isSchedulable() {
+        return (super.isSchedulable() || isNewProcessArrived);
+    }
+}
+
+class RR extends Scheduler {
+    private int quantum;    // RR 알고리즘의 time quantum, time slice
+    private int execTime;   // 현재 프로세스의 주어진 time quantum을 소진한 실행시간,
+    // time quantum 보다 작아야 하며, 만약 동일하면 time slice를 모두 소진한 것임
+    // 이 값은 매 시간 단위마다 1씩 증가함
+
+    RR(String name, int qauntum) {
+        super(name);
+        this.quantum = qauntum;
+        execTime = 0;
+    }
+
+    // 현재 실행중인 프로세스가 주어진 time quantum을 모두 소진한 경우 true
+    private boolean timeQuantumExausted() {
+        return ((currentProcess!=null) && (execTime == quantum));
+    }
+
+    public void schedule() {
+        super.schedule();
+
+        if(timeQuantumExausted()) {
+            Process p = readyQueue.remove();
+            readyQueue.add(p);
+        }
+        currentProcess = readyQueue.peek();
+        execTime = 0;
+    }
+
+    @Override
+    public boolean isSchedulable() {
+        return (super.isSchedulable() || timeQuantumExausted());
+    }
+    @Override
+    public void clockInterrupt() {
+        super.clockInterrupt();
+        execTime++;
+    }
+}
+
 class Jobs
 {
     // 도착할 각 프로세스의 이름, 도착시간, 서비스시간 등을 배열로 관리함
@@ -303,7 +364,7 @@ class ComputerSystem
 
             try { // 우리 스케줄러에서 사용할 시간단위는 100ms: 빠르게 실행하려면 이 값을 10 또는 1로 줄여도 됨
                 // 100ms마다 한번씩 위 scheduler.clockInterrupt()와 schedule()가 한번씩 호출됨
-                Thread.sleep(100); // 100 millisecond 동안 정지했다가 리턴함
+                Thread.sleep(1); // 100 millisecond 동안 정지했다가 리턴함
             }
             // sleep()하는 동안 다른 스레드에 의해 인터럽이 들어 온 경우, 여기서는 전혀 발생하지 않음
             catch (InterruptedException e) {
@@ -347,6 +408,12 @@ public class Main
                 case 4: cs.run(new SPN("SPN"));
                     break;
                 case 5: cs.run(new HRRN("HRRN"));
+                    break;
+                case 6: cs.run(new SRT("SRT"));
+                    break;
+                case 7: cs.run(new RR("RR(q=1)", 1));
+                    break;
+                case 8: cs.run(new RR("RR(q=4)", 4));
                     break;
                 default: System.out.println("WRONG menu item\n");
                     break;
