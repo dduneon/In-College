@@ -139,6 +139,22 @@ class FCFS extends Scheduler
     }
 }
 
+class SPN extends Scheduler{
+    SPN(String name) {    super(name); } // 스케줄러 이름
+
+    @Override
+    public void schedule() {
+        super.schedule();
+        int minindex = 0;
+        for(int i=0; i<numOfProcess; i++) {
+            if(readyQueue.get(i).getServiceTime() < readyQueue.get(minindex).getServiceTime())    minindex = i;
+        }
+        try {
+            currentProcess = readyQueue.get(minindex);
+        }
+        catch(IndexOutOfBoundsException e)  { currentProcess = null; }
+    }
+}
 
 class Jobs
 {
@@ -311,6 +327,8 @@ public class Main
                 // FCFS 객체를 생성한 후 이를 인자로 사용하여 cs.run()를 호출한다.
                 // cs.run()에서 FCFS 스케줄러를 작동시킴; "FCFS"는 스케줄러 이름이다.
                 case 3: cs.run(new FCFS("FCFS"));
+                    break;
+                case 4: cs.run(new SPN("SPN"));
                     break;
                 default: System.out.println("WRONG menu item\n");
                     break;
