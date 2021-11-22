@@ -1,7 +1,58 @@
 package com.company;
 
 import java.util.*;
+class Process {
+    private String name;        // 프로세스 이름
+    private int arrivalTime;    // 프로세스 도착시간
+    private int serviceTime;    // 프로세스 서비스시간, 실행해야 할 총 시간
+    private int executionTime;    // 프로세스의 현재까지 실행된 시간
 
+    // 문제 2-3: 프로세스의 각 필드를 초기화함
+    Process(String name, int arrivalTime, int serviceTime) {
+        this.name = name;
+        this.arrivalTime = arrivalTime;
+        this.serviceTime = serviceTime;
+        executionTime = 0;
+    }
+
+    // 문제 2-3: 프로세스의 현재까지 실행된 시간을 증가시킴
+    public void    incExecTime()          {
+        executionTime++;
+    }
+
+    // 문제 2-3: 프로세스의 서비스시간을 반환함
+    public int  getServiceTime()          { return serviceTime; }
+
+    // 문제 2-3: cTime은 현재시간임. 시스템에 도착한 이후 ready queue에서 현재시간까지 대기한 대기시간을 반환함
+    // cTime과 arrivalTime을 이용한 계산
+    public int  getWaitingTime(int cTime) { return cTime-arrivalTime; }
+
+    // 문제 2-3: 앞으로 더 실행해야 하는 남은 실행시간을 반환함
+    public int  getRemainingTime()        { return serviceTime-executionTime; }
+
+    // 문제 2-3: 프로세스의 실행이 종료되었는지 체크함: serviceTime과 executionTime의 상관관계
+    public boolean isFinished()           { return serviceTime==executionTime; }
+
+    // 문제 2-3: cTime은 현재시간임. 프로세스의 응답비율(Response Ratio)를 계산해 반환함
+    // 계산시 double로 변환 후 계산해야 함; 위 getWaitingTime(int cTime)을 활용할 것
+    public double  getResponeRatioTime(int cTime)  {
+        return ((double)getServiceTime() + (double)getWaitingTime(cTime)) / (double)getServiceTime();
+    }
+
+    // 프로세스의 이름을 반환함
+    public String  getName()              { return name; }
+
+    public void println(int cTime) {
+        System.out.printf("%s: s(%d) e(%d) r(%d) w(%2d) rr(%5.2f) f(%s)\n",
+                name, getServiceTime(), executionTime, getRemainingTime(),
+                getWaitingTime(cTime), getResponeRatioTime(cTime), isFinished());
+    }
+
+    public String toString() {
+        return String.format("%s: a(%2d) s(%d) e(%d)",
+                name, arrivalTime, serviceTime, executionTime);
+    }
+}
 class Jobs
 {
     // 도착할 각 프로세스의 이름, 도착시간, 서비스시간 등을 배열로 관리함
@@ -56,6 +107,27 @@ class Jobs
     // 아직 도착하지 않은 프로세스가 더 있는지 조사
     public boolean hasNextProcess() { return index < arrivalTimes.length; }
 
+    public void processTest() {
+        reset();
+        LinkedList<Process> rq = new LinkedList<>();
+
+        System.out.println("Create processes and print it's member data.");
+        for (int i = 0; i < processNames.length; ++i) {
+            Process p = new Process(processNames[i], arrivalTimes[i], serviceTimes[i]);
+            rq.add(p);
+            System.out.println(p); // 각 프로세스의 멤버 변수들을 출력한다.
+        }
+        for (Process p: rq) {
+            int eTime = p.getServiceTime(); // 이 값이 실행시간이 되도록 할 것이다.
+            if (eTime > 3) // 서비스시간이 3보다 큰 경우 실행시간을 반으로 설정하기 위함임
+                eTime = (int)(eTime * 0.5 + 0.5); // 실행시간의 반을 반올림
+            for (int i = 0; i < eTime; ++i) // 실행시간을 1씩 증가시킨다.
+                p.incExecTime();
+        }
+        System.out.println("Print retured values of member methods of each process.");
+        for (Process p: rq) // 각 프로세스의 멤버 메소드의 반환값들을 출력한다.
+            p.println(40);  // 40은 현재시간을 의미함
+    }
 }
 
 public class Main
@@ -78,6 +150,13 @@ public class Main
 
             switch (idx) {
                 case 1: jobs = new Jobs(scan);
+                    break;
+                case 2:
+                    if (jobs == null)
+                        System.out.println("Jobs is not initalized. "+
+                                "Run menu item [1.Jobs] in advance.");
+                    else
+                        jobs.processTest();
                     break;
                 default: System.out.println("WRONG menu item\n");
                     break;
