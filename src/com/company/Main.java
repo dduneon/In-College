@@ -155,6 +155,22 @@ class SPN extends Scheduler{
         catch(IndexOutOfBoundsException e)  { currentProcess = null; }
     }
 }
+class HRRN extends Scheduler{
+    HRRN(String name) {    super(name); } // 스케줄러 이름
+
+    @Override
+    public void schedule() {
+        super.schedule();
+        int maxindex = 0;
+        for(int i=0; i<numOfProcess; i++) {
+            if(readyQueue.get(i).getResponeRatioTime(currentTime) > readyQueue.get(maxindex).getResponeRatioTime(currentTime))    maxindex = i;
+        }
+        try {
+            currentProcess = readyQueue.get(maxindex);
+        }
+        catch(IndexOutOfBoundsException e)  { currentProcess = null; }
+    }
+}
 
 class Jobs
 {
@@ -329,6 +345,8 @@ public class Main
                 case 3: cs.run(new FCFS("FCFS"));
                     break;
                 case 4: cs.run(new SPN("SPN"));
+                    break;
+                case 5: cs.run(new HRRN("HRRN"));
                     break;
                 default: System.out.println("WRONG menu item\n");
                     break;
