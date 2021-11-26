@@ -426,43 +426,59 @@ class StudWork extends Student {
 }
 class PersonManager {
 
-    private Vector<Person> vector;
+    //private Vector<Person> vector;
+    private Map<String, Person> map;
 
     private Scanner scanner;
 
     PersonManager(Person array[], Scanner scanner) {
-//MAX_PERSONS개의 원소를 가진 persons 배열을 생성
         this.scanner = scanner;
 
-        vector = new Vector<Person>();
-        for(var a : array) vector.add(a);
+        while(map == null) {
+            System.out.print("1.HashMap  2.TreeMap\n" +
+                    "What kind of map do you like to create? ");
+
+            int num = scanner.nextInt();
+            if(num == 1)    map = new HashMap<>();
+            else if(num == 2)   map = new TreeMap<>();
+            else System.out.println("NOT supported map type. Just input 1 or 2.\n");
+
+        }
+
+        for(var a : array) map.put(a.name, a);
     }
 
     int findIndex(String name) {
-        for(int i=0; i<vector.size(); i++) {
-            if(name.equals(vector.elementAt(i).getName()))
-                return i;
-        }
-        System.out.println(name + " is NOT found.");
         return -1;
     }
 
     Person find(String name) {
-        int index = findIndex(name);
-        return (index < 0) ? null : vector.elementAt(index);
+        Person p = map.get(name);
+        if(p != null)   return p;
+        else {
+            System.out.println(name+ " is NOT found.");
+            return null;
+        }
     }
 
     void display() {
-        for(int i=0; i<vector.size(); i++)
-            System.out.println(vector.elementAt(i).toString());
-        System.out.println("Person count: " + vector.size());
+        var keys = map.keySet();
+        Iterator<String> it = keys.iterator();
+
+        while(it.hasNext()) {
+            String name = it.next();
+            Person p = map.get(name);
+            System.out.println(p);
+        }
+
+        System.out.println("Person count: " + map.size());
     }
 
     void search() {
         System.out.print("Name to search? ");
-        String find = scanner.next();
-        if(findIndex(find) != -1)
-            System.out.println(vector.elementAt(findIndex(find)).toString());
+        String name = scanner.next();
+        Person p = find(name);
+        if(p != null) System.out.println(p);
     }
 
     void update() {
@@ -477,9 +493,12 @@ class PersonManager {
 
     void delete() {
         System.out.print("Name to delete? ");
-        int idx = findIndex(scanner.next());
-        if(idx == -1) return;
-        vector.remove(idx);
+        String name = scanner.next();
+
+        Person p = map.get(name);
+        if(p != null) map.remove(name);
+        else System.out.println(name + " is NOT found.");
+
     }
     public Person getNewPerson() {
         String tag = scanner.next();
@@ -495,32 +514,7 @@ class PersonManager {
             return null;
         }
     }
-    void insert() {
-        int idx=0;
-        Person p=null;
-        while(true) {
-            if (vector.size() != 0) {
-                System.out.print("Existing name to insert in front? ");
-                String iname = scanner.next();
-                System.out.println("[Person delimiter(S or W or SW)] [Person information to insert]?");
-                p = getNewPerson();
-                idx = findIndex(iname);
-            }
-            else {
-                System.out.println("[Person delimiter(S or W or SW)] [Person information to insert]?");
-                p = getNewPerson();
-                idx = 0;
-            }
-            if(idx != -1) {
-                if(p == null) {
-                    break;
-                }
-                vector.insertElementAt(p, idx);
-                break;
-            }
-            else    break;
-        }
-    }
+    void insert() {System.out.println("NOT supported by HashMap or TreeMap.");}
 
     void append() {
         System.out.println("Continuously input [S or W or SW] [person information to insert], and\n" +
@@ -531,14 +525,14 @@ class PersonManager {
                 break;
             }
             Person p = getNewPerson();
-            if(p!=null) vector.add(p);
+            if(p!=null) map.put(p.name, p);
         }
     }
 
     void whatDoing() { System.out.print("Name to know about? ");
         String find = scanner.next();
-        if(findIndex(find) != -1)
-            vector.elementAt(findIndex(find)).whatAreYouDoing();
+        if(map.get(find) != null)
+            map.get(find).whatAreYouDoing();
     }
 
     public void call() {
@@ -579,9 +573,10 @@ class PersonManager {
     }         // 메뉴항목: FindPerson(equals()이용한 사람 찾기)
 
     public void displayPhone() {
-        for(int i=0; i<vector.size(); i++) {
-            System.out.println(vector.elementAt(i).name + ": " + vector.elementAt(i).smartPhone.toString());
-        }
+        var keys = map.keySet();
+
+        for (var it : keys)
+            System.out.println(it + ": " + map.get(it).smartPhone.toString());
     }       // 메뉴항목: DispAllPhone(모든폰보기)
 
     public void changePhone() {
@@ -619,43 +614,36 @@ class PersonManager {
             System.out.print("Seed integer for random number generator? ");
             rnd = new Random(scanner.nextInt());
         }
-        for(int i=0; i<vector.size(); i++) {
+
+        var keys = map.keySet();
+
+        for (var it : keys) {
             double weight = rnd.nextDouble();
-            vector.elementAt(i).weight = Math.round(weight * (60) + 40);
+            map.get(it).weight = Math.round(weight * (60) + 40);
         }
         display();
         // 여기에 코드 추가
     }
 
     public void displayStudWorks() {
-        for(int i=0; i<vector.size(); i++) {
-            StudWork SW;
-            if(vector.elementAt(i) instanceof StudWork) {
-                SW = (StudWork) vector.elementAt(i);
-                SW.printStudWork();
+
+        var keys = map.keySet();
+
+        for (var it : keys) {
+            if (map.get(it) instanceof StudWork) {
+                ((StudWork) map.get(it)).printStudWork();
             }
         }
+
     }   // 메뉴항목: DispAllAlba(모든알바생들보기)
 
-    public void sort() {
-        Collections.sort(vector);
-        display();
+    public void sort() {System.out.println("NOT supported by HashMap or TreeMap.");
     }                // 메뉴항목: Sort(정렬)
 
-    public void reverse() {
-        Collections.reverse(vector);
-        display();
+    public void reverse() {System.out.println("NOT supported by HashMap or TreeMap.");
     }             // 메뉴항목: Reverse(역순배치)
 
-    public void binarySearch() {
-        System.out.print("For binary search, it's needed to sort in advance. Name to search? ");
-        String name = scanner.next();
-        Person p = new Person(name, 0, 0.0);
-        int index = Collections.binarySearch(vector, p);
-        if(index >= 0)   {
-            System.out.println(vector.get(index));
-        }
-        else System.out.println(name + " is NOT found.");
+    public void binarySearch() {System.out.println("NOT supported by HashMap or TreeMap.");
     }        // 메뉴항목: BinarySearch(이진검색)
 
     final int 종료 = 0, 모두보기 = 1, 검색 = 2, 수정 = 3, 삭제 = 4,
@@ -752,9 +740,9 @@ public class Main {
         Scanner scanner = new Scanner(System.in);
         Person array[] = {
                 new StudWork("Kang 22 90.1 Computer 3 3.5:true:CU KangNam,Seven Eleven,"
-                        + "GS Convenient Store Suwon:Gwangju city BongsunDong 12 BeonJi"),
+                        + "GSConvenientStore Suwon:Gwangju city BongSunDong 12 BeonJi"),
                 new StudWork("Sham 20 81.5 Electronics 2 2.1:true:Family Mart,7 11,"
-                        + "GS BukGu:Gwangju city NamGu 12-2"),
+                        + "GS BookGu:Gwangju city NamGu 12-2"),
                 new StudWork("Jang 21 70.3 Mathematics 4 3.0:false:Seven Eleven:12-3 BeonGil"),
                 new Student("Hong", 10, 64, "Computer", 2, 3.5),
                 new Worker("Mong", 11, 75, "Samsung", "Director"),
