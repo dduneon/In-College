@@ -1,146 +1,108 @@
-package com.company;
+class Person {
+    private String name;       // 사람 이름
+    private int id;            // Identifier
+    private double weight;     // 체중
 
-import java.io.*;
-import java.util.InputMismatchException;
-import java.util.Scanner;
-
-class Main{
-    public static void printArray(double arr[][]) {
-        System.out.println("arr length: " + arr.length);
-
-        for(int i=0; i<arr.length; i++) {
-            System.out.print("arr[" + i + "]");
-            for(int j=0; j<arr[i].length; j++) {
-                System.out.print(" " + arr[i][j]);
-            }
-            System.out.println();
-        }
+    public void set(String name, int id, double weight) {
+        this.name = name;
+        this.id = id;
+        this.weight = weight;
+        System.out.println("Person::set(" + name + ", " + id + ", " + weight + ")");
     }
-    public static double[][] run1(Scanner s) {
-        System.out.print("The number of rows of non-square array of doubles to create? ");
-        int N = s.nextInt();
-
-        double [][] darr = new double[N][];
-        for(int i=0; i<N; i++) {
-            System.out.print("Input continuously "+ Integer.toString(i+1) + " doubles to be stored in line " + Integer.toString(i+1) + ": ");
-            darr[i] = new double[i+1];
-            for(int j=0; j<=i; j++) {
-                darr[i][j] = s.nextDouble();
-            }
-        }
-        return darr;
-    }
-    public static double[][] run2(Scanner s) {
-
-        int N;
-        double[][] darr;
-        while(true) {
-            try {
-                System.out.print("The number of rows of non-square array of doubles to create? ");
-                N = s.nextInt();
-                darr = new double[N][];
-                break;
-            }
-            catch(NegativeArraySizeException e) {
-                System.out.println("Input a POSITIVE integer. Try again.");
-            }
-            catch(InputMismatchException ee) {
-                System.out.println("Input an INTEGER. Try again.");
-                s.next();
-            }
-        }
-
-        for(int i=0; i<N; i++) {
-            System.out.print("Input continuously "+ Integer.toString(i+1) + " doubles to be stored in line " + Integer.toString(i+1) + ": ");
-            darr[i] = new double[i+1];
-            for(int j=0; j<=i; j++) {
-                while(true) {
-                    try {
-                        darr[i][j] = s.nextDouble();
-                        break;
-                    }
-                    catch(InputMismatchException e) {
-                        j = 0;
-                        System.out.println("Input a integer or double. Try again.");
-                        System.out.print("Input continuously "+ Integer.toString(i+1) + " doubles to be stored in line " + Integer.toString(i+1) + ": ");
-                        s.nextLine();
-                    }
-                }
-            }
-        }
-        return darr;
+    public Person(String name, int id, double weight) {
+        set(name, id, weight);
+        System.out.println("Person(" + name + ", " + id + ", " + weight + ")");
     }
 
-    public static void run3(Scanner s) {
-        final int USER = 0;      // 상수 값 정의
-        final int COMPUTER = 1;
-        // 0, 1, 2 중 하나의 난수를 미리 발생하여 저장해 놓은 난수 배열
-        // 이 배열에 저장된 값은 나중에 MJBarray[] 배열의 인덱스 값으로 사용됨
-        int randArray[] = { 2, 1, 2, 2, 2, 1, 1, 0, 0, 2,
-                0, 2, 0, 2, 0, 1, 1, 2, 0, 0,
-                2, 0, 2, 2, 1, 2, 0, 0, 1, 2, };
-        String MJBarray[] = { "m", "j", "b" }; // 묵(m)찌(j)빠(b) 문자열을 가진 배열
+    public void println() { print(); System.out.println(); }
 
-        System.out.println("Start the MUK-JJI-BBA game.");
-        System.out.print("Select any index for random number[0~29]? ");
-        int randIdx = s.nextInt();
-        s.nextLine(); // 입력 버퍼에 있는 '\n' 제거
+    public void print() {
+        System.out.print("name:" + name + ", ID:" + id + ", weight:" + weight);
+    }
 
-        int priority = USER; // 누가 우선권을 가졌는지 저장하고 있음, USER:사용자 우선권, COMPUTER:computer 우선권
-        String priStr[] = { "USER", "COMPUTER"}; // 화면에 출력할 때 사용함
+    public String getName() {        return name;    }
+    public int getID() {    return id;  }
+    public double getWeight() { return weight;  }
+    public void set(String name) {
+        System.out.println("set name: " + name);
+        this.name = name;   }
+    public void set(int id) {
+        System.out.println("set id: " + id);
+        this.id = id;   }
+    public void set(double weight) {
+        System.out.println("set weight: " + weight);
+        this.weight = weight;   }
 
-        while(true) {
-            System.out.println();
-            System.out.println(priStr[priority] + " has the higher priotiy.");
-            System.out.print("m(muk), j(jji), b(bba) or stop? ");
-            String user = s.nextLine();
-            if(user.equals("stop")) break;
-            else if(!(user.equals("m") || user.equals("j") || user.equals("b"))) {
-                System.out.println("Select one among m, j, b.");
-                continue;
-            }
+    public void whatAreYouDoing() {
+        System.out.println(name + "is taking a rest.");
+    }
 
-            int comIdx = randArray[randIdx++];
-            if(randIdx == 30) randIdx = 0;
+    public boolean isSame(String name, int id) {
+        if(this.name.equals(name) && (this.id == id))   return true;
+        return false;
+    }
+}
 
-            String computer = MJBarray[comIdx];
-            System.out.print("User = "+ user +", Computer = "+ computer +", ");
+public class Main {
 
-            if(user.equals(computer)) {
-                if (priority == USER) {
-                    System.out.println("USER WINs.");
-                    priority = USER;
-                } else {
-                    System.out.println("COMPUTER WINs.");
-                    priority = COMPUTER;
-                }
-            }
-            else {
-                System.out.println("SAME.");
-                if(( user.equals("m") && computer.equals("j") ) ||
-                        (user.equals("b") && computer.equals("m")) ||
-                        (user.equals("j") && computer.equals("b")))
-                    priority = USER;
-                else
-                    priority = COMPUTER;
-            }
+    public static void simpleTest() {
+        Person p = new Person("HongGilDong", 0, 71.5);
+        p.println();
+        System.out.println(p.getName() + "\'s ID is " + p.getID() +
+                "and his(her) weight is " + p.getWeight() + ".");
+        p.whatAreYouDoing();
+        p.set("LeeMongRyong");
+        p.set(1);
+        p.set(94.3);
+        p.println();
+        System.out.println("p.isSame(LeeMongRyong, 1): " + p.isSame("LeeMongRyong", 1));
+        System.out.println("p.isSame(HongGilDong, 2): " + p.isSame("HongGilDong", 2));
+        System.out.println("p.isSame(HongGilDong, 1): " + p.isSame("HongGilDong", 1));
+        p.set("HongGilDong", 2, 60);
+        p.println();
+        System.out.println("p.isSame(LeeMongRyong, 1): " + p.isSame("LeeMongRyong", 1));
+        System.out.println(); // 빈줄 출력
+    }
+    public static Person[] concatPersons(Person p1Arr[], Person p2Arr[]) {
+        Person[] sumArr = new Person[p1Arr.length + p2Arr.length];
+        System.out.println("concatPersons(p1Arr, p2Arr): concated array length: " +
+                sumArr.length);
+        System.out.println();
+
+        for(int i=0; i<sumArr.length; i++) {
+            if(i<p1Arr.length)
+                sumArr[i] = p1Arr[i];
+            else
+                sumArr[i] = p2Arr[i- p1Arr.length];
         }
+        return sumArr;
+    }
+
+    public static void arrayTest() {
+        Person twoPersons[] = {
+                new Person("HongGilDong", 0, 64),
+                new Person("LeeMongRyong", 1, 75)
+        };
+        Person threePersons[] = {
+                new Person("SungChoonHyang", 2, 45.5),
+                new Person("ShimChungEe", 3, 46.1),
+                new Person("LeeSoonShin", 4, 88.5)
+        };
+        System.out.println();
+
+        // 두 배열을 합친 새로운 배열을 리턴 받음
+        Person persons[] = concatPersons(twoPersons, threePersons);
+
+        System.out.println("Person count: " + persons.length);
+
+        for(int i=0; i<persons.length; i++)
+            persons[i].println();
+        System.out.println();
     }
 
     public static void main(String[] args) {
-        double array[][] = { {0}, {1,2}, {3,4,5} };
-        printArray(array);
-        System.out.println();
-        Scanner sc = new Scanner(System.in); // 필요한 파일 import시킬 것
-        double dArr1[][] = run1(sc);
-        printArray(dArr1);
-        System.out.println();
-        double dArr2[][] = run2(sc);
-        printArray(dArr2);
-        System.out.println();
-        run3(sc);
-        System.out.println();
-        sc.close();
-        System.out.println("Done.");
+        simpleTest();
+        arrayTest();
+        System.out.println("Done");
     }
 }
