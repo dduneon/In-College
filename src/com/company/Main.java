@@ -444,6 +444,7 @@ interface Factory<T>
         return line;
     }
     String HOME_DIR = "c:/tmp";
+    String getDefaultTextPathName();
 }
 
 class FileManager<T extends Person> {
@@ -563,7 +564,8 @@ class FileManager<T extends Person> {
         displayFileList();
     }
 
-    private final int 종료=0, 모든항목보기=1, 모든항목삭제=2, 파일목록보기=3, 파일삭제=4, 파일이름변경=5, 파일복사=6;
+    private final int 종료=0, 모든항목보기=1, 모든항목삭제=2, 파일목록보기=3, 파일삭제=4, 파일이름변경=5, 파일복사=6
+            , Text저장 = 11, Text불러오기=12;
 
 
     public void run() {
@@ -574,6 +576,7 @@ class FileManager<T extends Person> {
             System.out.println("------------------------- File Management Menu --------------------------------");
             System.out.println("- 0.Exit  1.DisplayAllPerson  2.DeleteAllPerson                               -");
             System.out.println("- 3.FileList 4.RemoveFile 5.RenameFile 6.CopyFile                             -");
+            System.out.println("- 11.SaveDefaultText   12.LoadDefaultText                                     -");
             System.out.println("-------------------------------------------------------------------------------");
             int idx;
             while (true) {
@@ -966,6 +969,8 @@ class StudentFactory implements Factory<Student> {
     // 스캐너를 통해 사용자가 지정한 Student 정보를 입력 받은 후 Student 객체를 생성하여 반환함
     @Override
     public Student newPerson(Scanner s) { return new Student(s); }
+    @Override
+    public String getDefaultTextPathName() { return HOME_DIR+"/student.txt"; }
 }
 
 // 위 두 클래스를 참고하여 아래 두 클래스를 완성하라.
@@ -1082,43 +1087,15 @@ class Managers {
 }
 public class Main
 {
-    /*
-    public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-        Managers.run(scanner);
-        scanner.close();
-    }
-     */
-
-    static void deleteFiles() {
+    static void deleteFiles() { // HOME_DIR의 모든 파일을 삭제함
         File files[] = new File(Factory.HOME_DIR).listFiles();
         for (var f: files)
             f.delete();
     }
 
-    static void createFile(String filename, int loopCount) {
-        File dst = new File(Factory.HOME_DIR+"/"+filename);
-        try {
-            var fo = new FileOutputStream(dst);
-            byte buf[] = new byte[1024]; // 1KB 버퍼
-            for (int i = 0; i < loopCount; ++i)
-                fo.write(buf);
-            fo.close();
-        }
-        catch (IOException e) {
-            System.out.println(filename+":file creation error: " + e);
-        }
-    }
-
-    static void createFiles() {
-        deleteFiles();
-        createFile("smallfile.dat", 1);  // 1KB
-        createFile("bigfile.dat", 1024); // 1MB
-    }
-
     public static void main(String[] args)
     {
-        createFiles();
+        // deleteFiles(); // 이 주석은 당분간은 유지하라.
         Scanner scanner = new Scanner(System.in);
         Managers.run(scanner);
         scanner.close();
