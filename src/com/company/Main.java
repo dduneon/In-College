@@ -4,33 +4,52 @@ import java.util.*;
 
 interface Phone {
     void sendCall(String callee);
-    // 이 메소드는 "Made a call to 수신자_이름(callee)"라고 출력해야 하며 이 출력의 앞 또는 뒤에 
+    // 이 메소드는 "Made a call to 수신자_이름(callee)"라고 출력해야 하며 이 출력의 앞 또는 뒤에
     // 발신자 이름도 함께 출력하되 메이커가 알아서 적절히 회사명, 모델명 등과 함께 표시하면 된다.
     void receiveCall(String caller);
     // 이 메소드는 "Received a call from 송신자_이름(caller)"라고 출력해야 하며 이 출력의 앞 또는
-    // 뒤에 수신자 이름도 함께 출력하되 메이커가 알아서 적절히 회사명, 모델명 등과 함께 표시하면 된다. 
+    // 뒤에 수신자 이름도 함께 출력하되 메이커가 알아서 적절히 회사명, 모델명 등과 함께 표시하면 된다.
 }
-
 interface Calculator {
     // +, -, *, / 사칙연산만 지원하고 그 외의 연산자일 경우 "NOT supported operator" 에러 메시지 출력
-    // 수식과 계산 결과 또는 에러 메시지를 출력해야 하며 이 출력의 앞 또는 뒤에 
-    // 계산기 소유주 이름도 함께 출력하되 메이커가 알아서 적절히 회사명, 모델명 등과 함께 표시하면 된다. 
+    // 수식과 계산 결과 또는 에러 메시지를 출력해야 하며 이 출력의 앞 또는 뒤에
+    // 계산기 소유주 이름도 함께 출력하되 메이커가 알아서 적절히 회사명, 모델명 등과 함께 표시하면 된다.
     void calculate(double oprd1, String op, double oprd2); // 예: calculate(3, "+", 2.0)
     void calculate(Scanner scanner); // 스캐너로부터 수식을 읽어 위 메소드를 호출함
+    void calculate(String expr);
 }
 
-// 위 Phone와 Calculator를 implements로 상속 받았지만 여전히 이들 인터페이스의 메소드들을 구현하지
-// 않았기 때문에 SmartPhone 클래스를 추상 클래스로 선언해야 함
-// 이들 메소드들은 아래 GalaxyPhone과 IPhone 클래스에서 서로 다르게 구현됨
 abstract class SmartPhone implements Phone, Calculator {
+    static Calendar userDate = null;
+    static boolean isNotQuested = true;
+    static void setDate(String line) {
+        // 키보드가 아닌 문자열 line으로부터 읽어 들이는 Scanner를 생성할 수 있음
+        Scanner s = new Scanner(line);
+        userDate = Calendar.getInstance(); // [교재 예제 6-11] 참조
+        userDate.set(s.nextInt(), s.nextInt()-1, s.nextInt());
+        // 위에서 달(month) 값 설정에 유의할 것. 출력 때는 반대로 해야 함.
+        userDate.set(Calendar.HOUR_OF_DAY, s.nextInt());
+        userDate.set(Calendar.MINUTE, s.nextInt());
+        userDate.set(Calendar.SECOND, s.nextInt());
+        s.close(); // 문자열에서 읽어 들이는 Scanner 닫음
+    }
     String owner;  // 스마트폰 소유주 이름
-    public SmartPhone(String owner) { this.owner = owner; }
+    Calendar date;
+    public SmartPhone(String owner) { this.owner = owner; date = (userDate == null)? Calendar.getInstance() : userDate; }
     public abstract String getMaker();
+    public String toString() {
+        int year = date.get(Calendar.YEAR);
+        int month = date.get(Calendar.MONTH) + 1;
+        int day = date.get(Calendar.DAY_OF_MONTH);
+        int ampm = date.get(Calendar.AM_PM);
+        String AP = (ampm == Calendar.AM)? "AM" : "PM";
+        int hour = date.get(Calendar.HOUR);
+        int minute = date.get(Calendar.MINUTE);
+        int second = date.get(Calendar.SECOND);
+        return getMaker() + " Phone\t" + "(" + year + "." + month + "." + day + " " + AP + " " + hour + ":" + + minute +
+                ":" + second + ")";
+    }
 }
-
-// 위 SmartPhone 클래스를 상속 받아 Phone, Calculator 인터페이스의 모든 메소드들을 구현함
-// 아래 GalaxyPhone과 그 아래 IPhone 클래스는 제조회사가 달라서 상속 받은 인터페이스의 모든 메소드들을
-// 기능은 모두 동일하게 제공하지만 구현은 서로 다르게 함
 class GalaxyPhone extends SmartPhone {
     public GalaxyPhone(String owner)           {
         super(owner);
@@ -77,12 +96,14 @@ class GalaxyPhone extends SmartPhone {
     }
 
     @Override
+    public void calculate(String expr) {
+        String st[] = expr.trim().split(" ");
+        calculate(Double.parseDouble(st[0]), st[1], Double.parseDouble(st[2]));
+    }
+
+    @Override
     public String getMaker() { return "SAMSUNG"; }
 }
-
-// 위 SmartPhone 클래스를 상속 받아 Phone, Calculator 인터페이스의 모든 메소드들을 구현함
-// 위 GalaxyPhone과 아래 IPhone 클래스는 제조회사가 달라서 상속 받은 인터페이스의 모든 메소드들을
-// 기능은 모두 동일하게 제공하지만 구현은 서로 다르게 함
 class IPhone extends SmartPhone {
     String model;
     public IPhone(String owner, String model)  {
@@ -127,7 +148,21 @@ class IPhone extends SmartPhone {
 
     @Override
     public void calculate(Scanner s) {
-        calculate(s.nextDouble(), s.next(), s.nextDouble());
+        calculate(s.nextLine());
+    }
+
+    @Override
+    public void calculate(String expr) {
+        String oprs[] = { "+", "-", "*", "/"};
+        String splt[] = null;
+        for(int i=0; i<oprs.length; i++) {
+            if (expr.indexOf(oprs[i]) >= 0) {
+                splt = expr.split("\\" + oprs[i]);
+                calculate(Double.parseDouble(splt[0]), oprs[i], Double.parseDouble(splt[1]));
+                return;
+            }
+        }
+        System.out.println(owner + "'s IPhone " + model + ": " + expr + " = NOT supported operator");
     }
 
     @Override
@@ -158,11 +193,9 @@ class Person {
     public Person(Scanner s) {
         this(s.next(), s.nextInt(), s.nextDouble());
     }
-    public void println() { print(); System.out.println(); }
+    //public void println() { print(); System.out.println(); }
 
-    public void print() {
-        System.out.print(name + ", ID:" + id + ", W:" + weight + ", " + smartPhone.getMaker());
-    }
+    //public void print() {System.out.print(name + ", ID:" + id + ", W:" + weight + ", " + smartPhone.getMaker());}
 
     public String getName() { return name; }
     public int getID() { return id; }
@@ -186,11 +219,23 @@ class Person {
     public void update(Scanner s) {
         set(name, s.nextInt(), s.nextDouble());
     }
+
+    public String toString() {
+        return name + ", ID:" + id + ", W:" + weight + ", " + smartPhone.getMaker();
+    }
+
+    public boolean equals(Object obj) {
+        Person p = (Person)obj;
+        if( this.name.equals(p.name) && this.id == p.id ) {
+            return true;
+        }
+        return false;
+    }
 }
 class Student extends Person {
-    private String department; // 학과
-    private int year; // 학년
-    private double GPA; // 평균평점
+    protected String department; // 학과
+    protected int year; // 학년
+    protected double GPA; // 평균평점
 
     public void setStudent(String department, int year, double GPA) {
         this.department = department;
@@ -220,16 +265,23 @@ class Student extends Person {
         System.out.println(name + " took several courses and got GPA " + GPA );
     }
 
-    @Override
-    public void print() {
-        super.print();
-        System.out.print(",\tD:" + department + ", Y:" + year + ", GPA:" + GPA);
-    }
+    //@Override
+    //public void print() { super.print(); System.out.print(",\tD:" + department + ", Y:" + year + ", GPA:" + GPA);}
 
     @Override
     public void update(Scanner s) {
         super.update(s);
         setStudent(s.next(), s.nextInt(), s.nextDouble());
+    }
+    public String toString() {
+        return super.toString() + ",\tD:" + department + ", Y:" + year + ", GPA:" + GPA;
+    }
+    public boolean equals(Object obj) {
+        Student p = (Student)obj;
+        if( super.equals(p) && this.department.equals(p.department) && this.year == p.year) {
+            return true;
+        }
+        return false;
     }
 }
 class Worker extends Person {
@@ -271,10 +323,99 @@ class Worker extends Person {
         System.out.println();
     }
 
-    @Override
-    public void print() {
-        super.print();
-        System.out.print(",\tC:" + company + ", P:" + position);
+    // @Override
+    //  public void print() { super.print();System.out.print(",\tC:" + company + ", P:" + position); }
+    public String toString() {
+        return super.toString() + ",\tC:" + company + ", P:" + position;
+    }
+    public boolean equals(Object obj) {
+        Worker p = (Worker)obj;
+        if( super.equals(p) && this.company.equals(p.company) && this.position.equals(p.position)) {
+            return true;
+        }
+        return false;
+    }
+}
+class StudWork extends Student {
+    protected boolean married; // 결혼유무
+    protected String career[]; // 알바경력
+    protected String address;  // 현근무지주소
+
+    public void setCareer(String sCareer) {
+        // ","로 구분된 하나의 문자열 즉,
+        // "CU KangNam,Seven Eleven,GS Convenient Store Suwon"로 주어진
+        // 경력 리스트(sCareer)를 토큰별로 쪼개어 문자열 배열 career[]에 저장
+        // String의 split()을 사용해도 되지만 여기서는 StringTokenizer를 이용할 것
+        StringTokenizer st = new StringTokenizer(sCareer, ",");
+        career = new String[st.countTokens()];
+        int count = st.countTokens();
+        for(int i=0; i<count; i++)
+            career[i] = st.nextToken();
+    }
+
+    public void setAddress(String sAddress) {
+        // 하나의 문자열 "Gwangju city BongsunDong 12 BeonJi"로 주어진 sAddress를
+        // 아래 pseudocode처럼 몇가지 정보를 수정/추가/삭제를 한 후 멤버 address에 저장
+        String 번길 = "BeonGil", 번지 = "BeonJi", 남구 = "NamGu";
+        StringBuffer sb = new StringBuffer(sAddress);
+        // StringBuffer의 메소드를 이용하여 구현할 것, 즉 indexOf(), replace(),
+        // sb.append(), delete(), insert(), toString() 활용
+
+        if(sb.indexOf(번지) >= 0)
+            sb.replace(sb.indexOf(번지), sb.indexOf(번지) + 번지.length() ,번길);
+        else if(sb.indexOf(번길) < 0)
+            sb.append("BeonGil");
+
+        if(sb.indexOf("-") >= 0)
+            sb.delete(sb.indexOf("-"),sb.indexOf("-")+1);
+        if(sb.indexOf("NamGu") < 0) {
+            if(sb.indexOf("city") >= 0)
+                sb.insert(sb.indexOf("city") + 4, " NamGu");
+            else
+                sb.insert(0, "NamGu ");
+        }
+        this.address = sb.toString();
+    }
+
+    public void set(String sMarried, String sCareer, String sAddress) {  // Overloading
+        married = Boolean.parseBoolean(sMarried);
+        setCareer(sCareer);
+        setAddress(sAddress);
+    }
+
+    public StudWork(String args[], String personArgs[]) {
+        super(personArgs[0], Integer.parseInt(personArgs[1]), Double.parseDouble(personArgs[2]),personArgs[3],Integer.parseInt(personArgs[4]),Double.parseDouble(personArgs[5]));
+        set(args[1], args[2], args[3]);
+    }
+    public StudWork(String args[]) {
+        this(args,args[0].split(" "));
+    }
+
+    // 생성자 StudWork(line)의 인자인 line 문자열은 아래처럼 구분자 ":"로 구분해서 지정해 주어야 한다.
+    // StudWork("Kang 22 90.1 Computer 3 3.5:true:CU KangNam,Seven Eleven,"
+    //        + "GS Convenient Store Suwon:Gwangju city BongsunDong 12 BeonJi")
+    // line 문자열은 "Student인적정보:결혼여부:경력리스트:주소"로 ":"로 구분된 4개의 서브문자열로 이루어진다.
+    // Student인적정보는 기존의 Student의 생성자 요소로 이루어져 있고, 결혼여부는 true 또는 false로 지정하고,
+    // 경력리스트는 자신이 지금껏 근무했던 근무지 이름을 ","로 구분하여 나열하면 되고,
+    // 마지막 주소는 하나의 문자열로 나열하면 된다.
+    public StudWork(String line)   {
+        this(line.trim().split(":"));
+    }
+    public String toString() {
+        StringBuffer sb = new StringBuffer(super.toString());
+        sb.append(" M:"+ married+ ",\n\tCareer:");
+        for(int i=0; i<career.length-1; i++) {
+            sb.append(career[i]+", ");
+        }
+        sb.append(career[career.length - 1] + ",\n\tAddr:" + address);
+        return sb.toString();
+    }
+
+    public void printStudWork(String name, String sYear, String sGPA, String sMarried) {
+        System.out.println("name:"+name+",\tyear:"+sYear+", GPA:"+sGPA+", M:"+sMarried);
+    }
+    public void printStudWork() {
+        printStudWork(name, Integer.toString(year), Double.toString(GPA), Boolean.toString(married));
     }
 }
 class PersonManager {
@@ -311,7 +452,7 @@ class PersonManager {
 
     void display() {
         for(int i=0; i<count; i++)
-            persons[i].println();
+            System.out.println(persons[i].toString());
         System.out.println("Person count: " + count);
     }
 
@@ -319,7 +460,7 @@ class PersonManager {
         System.out.print("Name to search? ");
         String find = scanner.next();
         if(findIndex(find) != -1)
-            persons[findIndex(find)].println();
+            System.out.println(persons[findIndex(find)].toString());
     }
 
     void update() {
@@ -346,6 +487,8 @@ class PersonManager {
             return new Student(scanner);
         else if (tag.equals("W")) // tag가 "W"
             return new Worker(scanner);
+        else if (tag.equals("SW"))
+            return new StudWork(scanner.nextLine());
         else {
             System.out.println(tag + ": WRONG delimiter");
             scanner.nextLine();
@@ -360,7 +503,7 @@ class PersonManager {
                 idx = findIndex(scanner.next());
             }
             if(idx != -1) {
-                System.out.println("[person delimiter(S or W)] [person information to insert]?");
+                System.out.println("[Person delimiter(S or W or SW)] [Person information to insert]?");
                 Person p = getNewPerson();
                 if(p == null) {
                     return;
@@ -376,7 +519,8 @@ class PersonManager {
     }
 
     void append() {
-        System.out.println("Continuously input person information to insert, and input \"end\" at the end.");
+        System.out.println("Continuously input [S or W or SW] [person information to insert], and\n" +
+                "input \"end\" at the end.");
         while(true) {
             if(scanner.hasNext("end")) {
                 scanner.next();
@@ -416,8 +560,81 @@ class PersonManager {
 
     }
 
+    public void findPerson() {
+        System.out.println("[Delimiter(S or W or SW)] [Person information to find by using equals()]?");
+        Person p = getNewPerson();
+        if (p == null)  return;
+        Person fp = find(p.name);
+        if(fp != null) {
+            if(fp.equals(p)) {
+                System.out.println(fp.toString());
+                return;
+            }
+        }
+        System.out.println("can NOT find anyone equal to " + p.name);
+    }         // 메뉴항목: FindPerson(equals()이용한 사람 찾기)
+
+    public void displayPhone() {
+        for(int i=0; i<count; i++) {
+            System.out.println(persons[i].name + ": " + persons[i].smartPhone.toString());
+        }
+    }       // 메뉴항목: DispAllPhone(모든폰보기)
+
+    public void changePhone() {
+        if (SmartPhone.isNotQuested) { // changePhone()을 처음 실행했다면 한번만 아래 과정 실행
+            scanner.nextLine(); // Menu item number? 12[엔터]: 숫자 뒤의 [엔터]를 skip
+            // ex: 년 월 일 시 분 초 순서로 입력
+            System.out.print("Date and time to set(ex: 2021 10 1 18 24 30)? ");
+            String line = scanner.nextLine();
+            if (!line.equals("")) // [년 월 일 시 분 초]를 입력한 경우
+                SmartPhone.setDate(line);
+            // 날짜를 입력하지 않고 그냥 엔터를 친 경우(line.equals("")) 아무 것도 설정하지 않음
+            SmartPhone.isNotQuested = false;
+            // 한번만 사용자에게 질의하여 위 과정을 실행하고 다음부터는 위 과정 생략하도록 하기 위해
+        }
+        System.out.println("Owner name and maker of phone to change(ex: Hong Samsung or Hong Apple)?");
+        String n = scanner.next(); String s = scanner.next();
+        Person p = find(n);
+        if(p==null) return;
+        if(s.equals("Samsung"))
+            p.setSmartPhone(new GalaxyPhone(p.name));
+        else if(s.equals("Apple"))
+            p.setSmartPhone(new IPhone(p.name, "13"));
+        else {
+            System.out.println(s + ": " + "WRONG phone's maker");
+            return;
+        }
+        System.out.println(p.getPhone());
+    }        // 메뉴항목: ChangePhone
+
+    private Random rnd = null;
+
+    // Math.random() 대신 rnd.random()을 사용할 것
+    public void changeWeight() {        // 메뉴항목: ChangeWeight(자동체중변경)
+        if (rnd == null) {
+            System.out.print("Seed integer for random number generator? ");
+            rnd = new Random(scanner.nextInt());
+        }
+        for(int i=0; i<count; i++) {
+            double weight = rnd.nextDouble();
+            persons[i].weight = Math.round(weight * (60) + 40);
+        }
+        display();
+        // 여기에 코드 추가
+    }
+
+    public void displayStudWorks() {
+        for(int i=0; i<count; i++) {
+            StudWork SW;
+            if(persons[i] instanceof StudWork) {
+                SW = (StudWork) persons[i];
+                SW.printStudWork();
+            }
+        }
+    }   // 메뉴항목: DispAllAlba(모든알바생들보기)
+
     final int 종료 = 0, 모두보기 = 1, 검색 = 2, 수정 = 3, 삭제 = 4,
-            삽입 = 5, 추가 = 6, 뭐하니 = 7,전화=8, 계산=9;
+            삽입 = 5, 추가 = 6, 뭐하니 = 7,전화=8, 계산=9, 사람찾기=10, 모든폰보기=11, 폰변경=12, 자동체중변경=13, 알바생들보기=14;
 
     public void run() {
         System.out.println("PersonManage::run() start");
@@ -425,7 +642,8 @@ class PersonManager {
         while (true) {
             System.out.println();
             System.out.println("Menu: 0.Exit 1.DisplayAll 2.Search 3.Update 4.Remove 5.Insert");
-            System.out.println(" 6.Append 7.WhatDoing? 8.PhoneCall 9.Calculator");
+            System.out.println("\t6.Append 7.WhatDoing? 8.PhoneCall 9.Calculator 10.FindPerson(equals())\n" +
+                    "\t11.DispAllPhone 12.ChangePhone 13.ChangeWeight 14.DispAllAlba");
             int idx;
             while (true) {
                 System.out.print("Menu item number? ");
@@ -466,6 +684,21 @@ class PersonManager {
                 case 계산:
                     calculate();
                     break;
+                case 사람찾기:
+                    findPerson();
+                    break;
+                case 모든폰보기:
+                    displayPhone();
+                    break;
+                case 폰변경:
+                    changePhone();
+                    break;
+                case 자동체중변경:
+                    changeWeight();
+                    break;
+                case 알바생들보기:
+                    displayStudWorks();
+                    break;
                 case 종료:
                     System.out.println("PersonManager run() returned\n");
                     return;
@@ -477,67 +710,217 @@ class PersonManager {
     }
 }
 
-
-
-// 기존 Main 클래스를 아래로 대체할 것
-
 public class Main {
 
-    public static void phoneTest(Phone p1, Phone p2) {
-        p1.sendCall("Choon");
-        p2.receiveCall("Hong");
-        System.out.println();
-
-        p2.sendCall("Hong");
-        p1.receiveCall("Choon");
-        System.out.println();
+    static void StringSpeed(String s) {
+        System.out.println("String Speed");
+        for (int i = 0; i < 20; i++) {
+            String last = s.substring(s.length()-1, s.length()); // 마지막 문자 저장
+            String sub = s.substring(0, s.length()-1); // 처음부터 마지막 문자 앞까지 저장
+            s = sub+last; // 저장된 마지막 문자를 맨 뒤에 다시 추가하여 새로운 문자열을 생성
+            System.out.print(i+" ");
+        }
+        System.out.println("\n");
     }
 
-    public static void CalculatorTest(Scanner s, Calculator c) {
-        c.calculate(2, "+", 4);
-        c.calculate(2, "-", 4);
-        c.calculate(2, "*", 4);
-        c.calculate(2, "/", 4);
-        c.calculate(2, "%", 3);
-        System.out.println();
+    static void StringBufferSpeed(StringBuffer sb) {
+        System.out.println("StringBuffer Speed");
+        for (int i = 0; i < 20; i++) {
+            String last = sb.substring(sb.length()-1, sb.length());// 마지막 문자 저장
+            sb.delete(sb.length()-1, sb.length()); // 마지막 문자 삭제
+            sb.append(last); // 저장된 마지막 문자를 다시 맨 뒤에 추가
+            System.out.print(i+" ");
+        }
+        System.out.println("\n");
+    }
 
-        for (int i = 0; i < 5; i++) {
-            System.out.print("Expression to calculate? "); // 2 - 3처럼 입력해야 함. 2-3하면 에러로 종료
-            c.calculate(s);
+    static void SpeedTest() {
+        String s = "This book is a 명품 Java Programming.";
+        // s 문자열을 반복적으로 계속 두배로 키워 매우 긴 문자열(약 300MB)을 만든다.
+        // 아래 for문의 23 대신 15, 20 등으로 변경해서 짧은 문자열일 경우의 속도도 비교해 보라.
+
+        // 만약 자바시스템의 기본 메모리 크기가 작게 설정되어 있으면
+        // 아래 for문이 메모리 부족으로 죽을 수 있다.
+        // 이 경우 프로그램이 죽지 않을 때까지 23을 계속 하나씩 줄여서 테스트해라.
+        // 죽지 않는 시점의 그 숫자를 23 대신 사용하라.
+        for (int i = 0; i < 22; i++) {
+            s += s;
+            System.out.print(i+" ");
+        }
+        System.out.println("\ns length is "+s.length()/(1024*1024)+" MB\n");
+        StringSpeed(s); // 아래 문장과 순서를 바꾸어도 속도 차이는 있음
+        StringBufferSpeed(new StringBuffer(s));
+    }
+    static void StringRotation(String s) {
+        String book = "book", BOOK = "BOOK", 명품 = "Masterpiece ", Java = "Java";
+        System.out.println("String Rotation: " + s);
+        for (int i = 0; i < 20; i++) {
+            if(s.indexOf(book) >= 0)
+                s = s.replace(book, BOOK);
+            else if(s.indexOf(BOOK) >= 0)
+                s = s.replace(BOOK, book);
+            if(s.indexOf(명품) >= 0) {
+                String start = s.substring(0, s.indexOf(명품));
+                String end = s.substring(s.indexOf(명품) + 명품.length(), s.length());
+                s = start + end;
+            }
+            else {
+                if(s.indexOf(Java) >= 0 ) {
+                    String start = s.substring(0, s.indexOf(Java));
+                    String end = s.substring(s.indexOf(Java), s.length());
+                    s = start + 명품 + end;
+                }
+            }
+
+            String start = s.substring(0, 1);
+            String end = s.substring(1, s.length());
+            s = end + start;
+            System.out.println(((i < 10)? " ": "")+i+" "+s);
         }
         System.out.println();
     }
 
-    public static void smartPhoneTest(Scanner scanner) {
-        GalaxyPhone gp = new GalaxyPhone("Hong");
-        IPhone ip = new IPhone("Choon", "12");
-        gp.sendCall("Choon");
-        ip.receiveCall("Hong");
+    static String StringBufferRotation(String s) {
+        String book = "book", BOOK = "BOOK", 명품 = "Masterpiece ", Java = "Java";
+        StringBuffer sb = new StringBuffer(s);
+        System.out.println("StringBuffer Rotation: " + s);
+        for (int i = 0; i < 20; i++) {
+            if (sb.indexOf(book) >= 0)
+                sb = sb.replace(sb.indexOf(book), sb.indexOf(book)+book.length(), BOOK);
+            else if (sb.indexOf(BOOK) >= 0)
+                sb = sb.replace(sb.indexOf(BOOK), sb.indexOf(BOOK)+BOOK.length(), book);
+            if(sb.indexOf(명품) >= 0)
+                sb.delete(sb.indexOf(명품), sb.indexOf(명품) + 명품.length());
+            else
+            if(sb.indexOf(Java) >= 0)
+                sb.insert(sb.indexOf(Java), 명품);
+
+            String del = sb.substring(0, 1);
+            sb.delete(0, 1);
+            sb.append(del);
+            System.out.println(((i < 10)? " ": "")+i+" "+sb);
+        }
         System.out.println();
-
-        ip.sendCall("Hong");
-        gp.receiveCall("Choon");
-        System.out.println();
-
-        phoneTest(gp, ip);
-
-        System.out.println("Calculation in Galaxy phone");
-        CalculatorTest(scanner, gp);
-
-        System.out.println("Calculation in Iphone");
-        CalculatorTest(scanner, ip);
+        return sb.toString();
     }
 
-    public static void main(String[] args) { Scanner scanner = new Scanner(System.in);
-        smartPhoneTest(scanner);
-        Person fivePersons[] = {
+    static void StringAndStringBufferTest(Scanner scanner) {
+        String s0 = "This book is a Masterpiece Java Programming.";
+        System.out.println("If just [enter], automatic input: " + s0);
+        System.out.println("Simple sentence including 3 words(book, Masterpiece, Java)? ");
+        String s = scanner.nextLine();
+        System.out.println();
+
+        if (!s.equals("")) // 그냥 엔터만 치지 않고 정보를 입력한 후 엔터친 경우
+            s0 = s;        // 사용자가 입력한 문장열로 기존 s0 대체
+        StringRotation(s0);
+        s = StringBufferRotation(s0);
+        System.out.println("StringBufferRotation() returns: "+s+"\n");
+    }
+    static Person p1  = new Person ("Choon", 12, 45.5);
+    static Person sp1 = new Student("Hong",  10, 71.5, "Computer", 2, 3.5);
+    static Person wp1 = new Worker ("Mong",  11, 75,   "Samsung",  "Director");
+
+    static void toStringTest() {
+        // Overriding: toString()
+        System.out.println(p1);
+        System.out.println(sp1);
+        System.out.println(wp1);
+
+        Student s1 = (Student)sp1;
+        Worker  w1 = (Worker)wp1;
+        System.out.println(s1+" "   + "Student: "+1.0);
+        System.out.println(w1+"    "+ "Worker:  "+true);
+        System.out.println();
+    }
+    static void compares(String msg, Person p1, Person p2) {
+        System.out.println(msg + (p1.equals(p2)?  "equals" : "NOT equal"));
+    }
+    /*
+     쉬운 비교을 위해 위 [클래스 및 코드 추가 1-2]의 static 변수를 여기에 복사했음
+     static Person   p1 = new Person ("Choon", 12, 45.5);
+     static Person  sp1 = new Student("Hong",  10, 71.5, "Computer", 2, 3.5);
+     static Person  wp1 = new Worker ("Mong",  11, 75,   "Samsung",  "Director");
+    */
+    static void equalsTest() {
+        Person   p2 = new Person ("Choon", 22, 45.5);
+        Student sp2 = new Student("Hong",  10, 81.5, "Computer", 3, 3.5);
+        Worker  wp2 = new Worker ("Mong",  11, 70.3, "Samsung",  "DepartmentHead");
+        compares("p1 and p2 are ", p1, p2);
+        p2.set(12); // ID 변경
+        compares("p1 and p2 are ", p1, p2);
+        System.out.println();
+        compares("p1 and sp2 are ", p1, sp2);
+        //compares("sp2과 p1는 ", sp2, p1); // 주석을 풀면 프로그램이 죽는 이유는?
+        System.out.println();
+        compares("sp1 and sp2 are ", sp1, sp2);
+        sp2.setStudent("Computer", 2, 3.5);
+        compares("sp1 and sp2 are ", sp1, sp2);
+        System.out.println();
+        compares("wp1 and wp2 are ", wp1, wp2);
+        wp2.set("Samsung", "Director");
+        compares("wp1 and wp2 are ", wp1, wp2);
+        System.out.println();
+    }
+
+    static void StudWorkTest(Person p1, Person p2, Person p3) {
+        StudWork sw1=(StudWork)p1, sw2=(StudWork)p2, sw3=(StudWork)p3;
+        System.out.println("StudentWorker: System.out.println()");
+        System.out.println(sw1);
+        System.out.println(p1);
+        System.out.println(sw2);
+        System.out.println(p2);
+        System.out.println(sw3);
+        System.out.println(p3);
+        System.out.println("\nStudentWorker.printStudWork()");
+        sw1.printStudWork();
+        sw2.printStudWork();
+        sw3.printStudWork();
+    }
+    static void calculatorTest() {
+        Calculator gc = new GalaxyPhone(sp1.getName());
+        Calculator ic = new IPhone(wp1.getName(), "13");
+        // 갤럭시는 연산자와 피연산자가 [하나의 ' '로만] 분리되어 있어야 함
+        gc.calculate("1 + 2");
+        gc.calculate("1 - 2");
+        gc.calculate("1 * 2");
+        gc.calculate("1 / 2");
+        gc.calculate("1 | 2");
+        //gc.calculate("1+2"); // 연산자와 피연산자가 " "로 분리되어 있지 않아 주석을 풀면 프로그램이 죽는다.
+        //gc.calculate("1  +  2"); // 연산자와 피연산자가 두 개의 ' '로 분리되어 있어 주석을 풀면 프로그램이 죽는다.
+        // 두 개의 스페이스로 분리된 "1  +"는 String::split()에 의해 "1", "", "+"로 분리되기 때문이다.
+
+        // IPhone의 경우 연산자와 피연산자가 ' '로 분리되지 않아도 처리할 수 있음
+        ic.calculate("1 + 2");
+        ic.calculate("1- 2");
+        ic.calculate("1 *2");
+        ic.calculate("1/2");
+        ic.calculate("1&2");
+    }
+
+    public static void main(String[] args) {
+        //SpeedTest();
+        Scanner scanner = new Scanner(System.in);
+        StringAndStringBufferTest(scanner);
+        toStringTest();
+
+        equalsTest();
+        Person array[] = {
+                // 중요: StudWork의 경우 문자열 내에 필드구분을 위해 하나의 스페이스만으로 각 필드를 구분해야 함
+                new StudWork("Kang 22 90.1 Computer 3 3.5:true:CU KangNam,Seven Eleven,"
+                        + "GS Convenient Store Suwon:Gwangju city BongsunDong 12 BeonJi"),
+                new StudWork("Sham 20 81.5 Electronics 2 2.1:true:Family Mart,7 11,"
+                        + "GS BukGu:Gwangju city NamGu 12-2"),
+                new StudWork("Jang 21 70.3 Mathematics 4 3.0:false:Seven Eleven:12-3 BeonGil"),
                 new Student("Hong",  10, 64,   "Computer",    2, 3.5),
                 new Worker ("Mong",  11, 75,   "Samsung",     "Director"),
                 new Worker ("Choon", 12, 45.5, "LG",          "DepartmentHead"),
                 new Student("Chung", 13, 46.1, "Physics",     1, 3.8),
                 new Student("Soon",  14, 88.5, "Electronics", 4, 2.5),
         };
-        PersonManager pm = new PersonManager(fivePersons, scanner);
+        StudWorkTest(array[0], array[1], array[2]);
+        calculatorTest();
+        PersonManager pm = new PersonManager(array, scanner);
         pm.run();
         scanner.close();
     }
