@@ -1,6 +1,10 @@
 package com.company;
 
 import java.awt.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.*;
 
 interface Phone {
@@ -439,6 +443,175 @@ interface Factory<T>
             ;
         return line;
     }
+    String HOME_DIR = "c:/tmp";
+}
+
+class FileManager<T extends Person> {
+
+    private Scanner scanner;
+    private LinkedList<T> list;
+    private Factory<T> factory;
+
+    FileManager(LinkedList<T> list, Scanner scanner, Factory<T> factory) {
+        this.scanner = scanner;
+        this.factory = factory;
+        this.list = list;
+    }
+
+    void display() {
+        for(var p : list) System.out.println(p);
+        System.out.println("Person count: " + list.size());
+    }
+    void deleteAllPersons() {
+        list.clear();
+    }
+    void printFileInfo(File f) { // [교재 예제 8-8] 참조
+        long t = f.lastModified(); // 마지막으로 수정된 시간 구하기
+        t = 0;  // 자동 체크 때 사용할 예정임
+        System.out.printf("%-20s\t%tF %Tp %tI:%tM %9d\n",
+                (f.isDirectory()? "[D] ":"") + f.getName(), t, t, t, t, f.length());
+        // "파일이름 수정년-월-일 오전/오후 수정시간:분 파일크기"
+        // 디렉토리일 일 경우 디렉토리 이름 앞에 "[D] "를 아니면 ""를 추가
+        // 날짜 및 시간 정보 출력과 관련한 포맷은 아래 URL에서 java.util.Formatter 클래스 참조할 것
+        // https://docs.oracle.com/javase/10/docs/api/index.html?overview-summary.html
+    }
+
+    // 앞으로 우리는 항상 "c:/tmp" 폴더에서만 작업할 것이다.
+    File[] displayFileList() {  // [교재 예제 8-8] 참조
+        String pathname = Factory.HOME_DIR;  // "c:/tmp"로 지정되어 있음, 아래 3) 참조
+        System.out.println("\n" + pathname + ": File list");
+        //pathname을 이용하여 File 객체 dir 생성
+        File dir = new File(pathname);
+
+        //dir 디렉토리에 포한된 파일과 하부 디렉토리 이름의 리스트를 얻어
+        File[] files = dir.listFiles();
+        for(int i=0; i<files.length; i++) {
+            System.out.printf("%2d: ", i);
+            printFileInfo(files[i]);
+        }
+        return files;
+    }
+    File getExistingFile(String preMsg, String postMsg) {
+        File[] files = displayFileList();
+        if (preMsg.length() != 0) // preMsg가 ""가 아닌 경우
+            preMsg += " ";
+        while (true) {
+            System.out.print("Index number of "+preMsg+"file to "+postMsg+"?[-1:exit] ");
+            try {
+                int val = scanner.nextInt();
+                if (val > -1 && val < files.length) {
+                    return files[val];
+                }
+                else if (val == -1) return null;
+                else System.out.println("Invalid number.");
+            } catch (InputMismatchException e) { // 정수 외의 값 입력했을 때
+                System.out.println("Input an index NUMBER.");
+                scanner.nextLine(); // 입력된 그 행의 나머지 내용 스킵
+            }
+        }
+    }
+    void delete() {
+        File f = getExistingFile("", "delete");
+        if(f == null)   return;
+        f.delete();
+        displayFileList();
+    }
+    void rename() {
+        File src = getExistingFile("source", "rename");
+        if(src == null) return;
+
+        System.out.print("Target file name? ");
+        String target = scanner.next();
+        String pathname = src.getParent() + "/" + target;
+
+        File dst = new File(pathname);
+        if(dst.exists()) {
+            System.out.println(dst.getName() + " already exists");
+            return;
+        }
+        src.renameTo(dst);
+        displayFileList();
+    }
+    void copy()   {
+        File src = getExistingFile("source", "copy");
+        if(src == null) return;
+
+        System.out.print("Target file name? ");
+        String target = scanner.next();
+        String pathname = src.getParent() + "/" + target;
+
+        File dst = new File(pathname);
+        if(dst.exists()) {
+            displayFileList();
+            System.out.println(dst.getName() + " already exists");
+            return;
+        }
+
+        try {
+            FileInputStream fi = new FileInputStream(src);
+            FileOutputStream fo = new FileOutputStream(dst);
+            byte [] buf = new byte [1024*8];
+            for (int n = 0; (n = fi.read(buf)) > 0; )
+                fo.write(buf, 0, n);
+
+            fi.close();
+            fo.close();
+        }catch(IOException e) {
+            System.out.println("File copy error");
+        }
+
+        displayFileList();
+    }
+
+    private final int 종료=0, 모든항목보기=1, 모든항목삭제=2, 파일목록보기=3, 파일삭제=4, 파일이름변경=5, 파일복사=6;
+
+
+    public void run() {
+        System.out.println("FileManager run() starts");
+        displayFileList();
+        while (true) {
+
+            System.out.println("------------------------- File Management Menu --------------------------------");
+            System.out.println("- 0.Exit  1.DisplayAllPerson  2.DeleteAllPerson                               -");
+            System.out.println("- 3.FileList 4.RemoveFile 5.RenameFile 6.CopyFile                             -");
+            System.out.println("-------------------------------------------------------------------------------");
+            int idx;
+            while (true) {
+                System.out.print("Menu item number? ");
+                try {
+                    idx = scanner.nextInt();
+                } catch (InputMismatchException e) {
+                    System.out.println("Input an INTEGER.");
+                    scanner.nextLine();
+                    continue;
+                }
+                break;
+            }
+
+            switch (idx) {
+                case 모든항목보기:
+                    display();
+                    break;
+                case 모든항목삭제:
+                    deleteAllPersons();
+                    break;
+                case 파일목록보기:
+                    displayFileList();
+                    break;
+                case 파일삭제:
+                    delete();
+                    break;
+                case 파일이름변경:
+                    rename();
+                    break;
+                case 파일복사:
+                    copy();
+                    break;
+                case 종료: System.out.println("FileManager run() returned\n"); return;
+                default:  System.out.println("WRONG menu item"); break;
+            }
+        }
+    }
 }
 
 class PersonManager<T extends Person> {
@@ -670,19 +843,27 @@ class PersonManager<T extends Person> {
         else System.out.println(name + " is NOT found.");
     }        // 메뉴항목: BinarySearch(이진검색)
 
+    void fileManager() {
+        var fileMng = new FileManager<T>(list, scanner, factory);
+        fileMng.run();
+    }
+
     final int 종료 = 0, 모두보기 = 1, 검색 = 2, 수정 = 3, 삭제 = 4,
             삽입 = 5, 추가 = 6, 뭐하니 = 7,전화=8, 계산=9, 사람찾기=10, 모든폰보기=11, 폰변경=12, 자동체중변경=13, 알바생들보기=14,
-            정렬 = 15, 역순배치 = 16, 이진검색 = 17;
+            정렬 = 15, 역순배치 = 16, 이진검색 = 17, 파일관리 = 18;
 
     public void run() {
         System.out.println("PersonManage::run() start");
         display();
         while (true) {
             System.out.println();
-            System.out.println("Menu: 0.Exit 1.DisplayAll 2.Search 3.Update 4.Remove 5.Insert");
-            System.out.println("\t6.Append 7.WhatDoing? 8.PhoneCall 9.Calculator 10.FindPerson(equals())\n" +
-                    "\t11.DispAllPhone 12.ChangePhone 13.ChangeWeight 14.DispAllAlba\n" +
-                    "\t15.Sort 16.Reverse 17.BinarySearch\n");
+            System.out.println("====================== Person Management Menu ============================");
+            System.out.println("= 0.Exit 1.DisplayAll 2.Search 3.Update 4.Remove 5.Insert\t=");
+            System.out.println("= 6.Append 7.WhatDoing? 8.PhoneCall 9.Calculator 10.FindPerson(equals())\t=\n" +
+                    "= 11.DispAllPhone 12.ChangePhone 13.ChangeWeight 14.DispAllAlba\t=\n" +
+                    "= 15.Sort 16.Reverse 17.BinarySearch 18.FileManagement\t=\n" +
+                    "==========================================================================");
+
             int idx;
             while (true) {
                 System.out.print("Menu item number? ");
@@ -747,6 +928,9 @@ class PersonManager<T extends Person> {
                 case 이진검색:
                     binarySearch();
                     break;
+                case 파일관리:
+                    fileManager();
+                    break;
                 case 종료:
                     System.out.println("PersonManager run() returned\n");
                     return;
@@ -801,30 +985,34 @@ class StudWorkFactory implements Factory<StudWork> {
         return new StudWork(Factory.getNextLine(s)); }
 }
 
-public class Main {
+class Managers {
+    static Scanner scanner;
+    static PersonManager<Student>  studMng;
+    static PersonManager<Worker>   workMng;
+    static PersonManager<StudWork> studWorkMng;
+    static PersonManager<Person>   personMng;
 
-    public static void main(String[] args)
-    {
-        Scanner scanner = new Scanner(System.in);
-
+    private static void createStudentManager() {
         Student students[] = {
                 new Student("Hong",  10, 64,   "Computer",    2, 3.5),
                 new Student("Chung", 11, 46.1, "Physics",     1, 3.8),
                 new Student("Soon",  12, 88.5, "Electronics", 4, 2.5),
         };
-        //var studMng = new PersonManager<Student>(students, scanner);
         var studFact = new StudentFactory();
-        var studMng = new PersonManager<Student>(students, scanner, studFact);
+        studMng = new PersonManager<Student>(students, scanner, studFact);
+    }
 
+    private static void createWorkerManager() {
         Worker workers[] = {
                 new Worker ("Hong",  10, 64,   "Samsung", "Director"),
                 new Worker ("Chung", 11, 46.1, "LG",      "DeparmentHead"),
                 new Worker ("Soon",  12, 88.5, "Naver",   "TeamLeader"),
         };
-        //var workMng = new PersonManager<Worker>(workers, scanner);
         var workFact = new WorkerFactory();
-        var workMng = new PersonManager<Worker>(workers, scanner, workFact);
+        workMng = new PersonManager<Worker>(workers, scanner, workFact);
+    }
 
+    private static void createStudWorkManager() {
         StudWork studWorks[] = {
                 // 중요: StudWork의 기본인적정보의("Kang 22 90.1 Computer 3 3.5") 경우
                 //      문자열 내에 필드구분을 위해 하나의 스페이스만으로 각 필드를 구분해야 함
@@ -832,10 +1020,11 @@ public class Main {
                 new StudWork("Chung 11 46.1 Physics 1 3.8:true:Family Mart,7 11,GS BookGu:Gwangju city NamGu 12-2"),
                 new StudWork("Soon 12 88.5 Electronics 4 2.5:false:Seven Eleven:12-3 BeonGil"),
         };
-        //var studWorkMng = new PersonManager<StudWork>(studWorks, scanner);
         var studWorkFact = new StudWorkFactory();
-        var studWorkMng = new PersonManager<StudWork>(studWorks, scanner, studWorkFact);
+        studWorkMng = new PersonManager<StudWork>(studWorks, scanner, studWorkFact);
+    }
 
+    private static void createPersonManager() {
         Person persons[] = {
                 // 중요: StudWork의 기본인적정보의("Kang 22 90.1 Computer 3 3.5") 경우
                 //      문자열 내에 필드구분을 위해 하나의 스페이스만으로 각 필드를 구분해야 함
@@ -848,12 +1037,26 @@ public class Main {
                 new Student("Chung", 13, 46.1, "Physics",     1, 3.8),
                 new Student("Soon",  14, 88.5, "Electronics", 4, 2.5),
         };
-        //var personMng = new PersonManager<Person>(persons, scanner);
         var personFact = new PersonFactory();
-        var personMng = new PersonManager<Person>(persons, scanner, personFact);
+        personMng = new PersonManager<Person>(persons, scanner, personFact);
+    }
+
+    public static void create() {
+        createStudentManager();
+        createWorkerManager();
+        createPersonManager();
+        createStudWorkManager();
+    }
+
+    public static void run(Scanner scanner)
+    {
+        Managers.scanner = scanner;
+        create();
 
         while (true) {
-            System.out.println("Menu: 0.Exit 1.Student 2.Worker 3.StudWork 4.AllKindPerson");
+            System.out.println("************************ Main Menu *********************");
+            System.out.println("* 0.Exit 1.Student 2.Worker 3.StudWork 4.AllKindPerson *");
+            System.out.println("********************************************************");
             System.out.print("Menu item number? ");
             int idx = scanner.nextInt();
             if (idx == 0)
@@ -875,6 +1078,49 @@ public class Main {
                     break;
             }
         }
+    }
+}
+public class Main
+{
+    /*
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        Managers.run(scanner);
+        scanner.close();
+    }
+     */
+
+    static void deleteFiles() {
+        File files[] = new File(Factory.HOME_DIR).listFiles();
+        for (var f: files)
+            f.delete();
+    }
+
+    static void createFile(String filename, int loopCount) {
+        File dst = new File(Factory.HOME_DIR+"/"+filename);
+        try {
+            var fo = new FileOutputStream(dst);
+            byte buf[] = new byte[1024]; // 1KB 버퍼
+            for (int i = 0; i < loopCount; ++i)
+                fo.write(buf);
+            fo.close();
+        }
+        catch (IOException e) {
+            System.out.println(filename+":file creation error: " + e);
+        }
+    }
+
+    static void createFiles() {
+        deleteFiles();
+        createFile("smallfile.dat", 1);  // 1KB
+        createFile("bigfile.dat", 1024); // 1MB
+    }
+
+    public static void main(String[] args)
+    {
+        createFiles();
+        Scanner scanner = new Scanner(System.in);
+        Managers.run(scanner);
         scanner.close();
     }
 }
