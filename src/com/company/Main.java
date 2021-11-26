@@ -169,7 +169,6 @@ class IPhone extends SmartPhone {
     @Override
     public String getMaker() { return "Apple"; }
 }
-
 class Person implements Comparable<Person>{
     public String name; // 사람 이름
     public int id; // Identifier
@@ -407,6 +406,7 @@ class StudWork extends Student {
     public StudWork(String line)   {
         this(line.trim().split(":"));
     }
+
     public String toString() {
         StringBuffer sb = new StringBuffer(super.toString());
         sb.append(" M:"+ married+ ",\n\tCareer:");
@@ -424,66 +424,68 @@ class StudWork extends Student {
         printStudWork(name, Integer.toString(year), Double.toString(GPA), Boolean.toString(married));
     }
 }
-class PersonManager {
 
-    //private Vector<Person> vector;
-    private Map<String, Person> map;
+interface Factory<T>
+{
+    // 스캐너로부터 제네릭 타입 T형의 사람 정보를 입력 받아 T형의 새로운 사람 객체를 생성하여 반환함
+    T newPerson(Scanner scanner);
+    // 이 메소드는 추후 Factory<T>를 implements하는 여러 클래스에서 직접 구현해야 한다.
+    // 5번 메뉴항목 입력 후 "Soon" 뒤에 ([엔터] 또는 ' ' 또는 '\t')가 있고
+    // 그 뒤에 "사람 인적정보[엔터]" 입력되었을 때 중간에 있는 ([엔터] 또는 ' ' 또는 '\t')를
+    // 제거하고 "사람 인적정보"를 읽어 내는 메소드
+    public static String getNextLine(Scanner s) {
+        String line = s.nextLine().trim();
+        for ( ; line.equals(""); line = s.nextLine().trim())
+            ;
+        return line;
+    }
+}
+
+class PersonManager<T extends Person> {
+
+    private LinkedList<T> list;
+    private Factory<T> factory;
 
     private Scanner scanner;
 
-    PersonManager(Person array[], Scanner scanner) {
+    PersonManager(T array[], Scanner scanner, Factory<T> factory) {
         this.scanner = scanner;
+        this.factory = factory;
+        list = new LinkedList<>();
 
-        while(map == null) {
-            System.out.print("1.HashMap  2.TreeMap\n" +
-                    "What kind of map do you like to create? ");
-
-            int num = scanner.nextInt();
-            if(num == 1)    map = new HashMap<>();
-            else if(num == 2)   map = new TreeMap<>();
-            else System.out.println("NOT supported map type. Just input 1 or 2.\n");
-
-        }
-
-        for(var a : array) map.put(a.name, a);
+        for(var p : array)
+            list.add(p);
     }
 
     int findIndex(String name) {
+        for(int i=0; i<list.size(); i++) {
+            if(name.equals(list.get(i).getName()))
+                return i;
+        }
+        System.out.println(name + " is NOT found.");
         return -1;
     }
 
-    Person find(String name) {
-        Person p = map.get(name);
-        if(p != null)   return p;
-        else {
-            System.out.println(name+ " is NOT found.");
-            return null;
-        }
+    T find(String name) {
+        int index = findIndex(name);
+        return (index < 0) ? null : list.get(index);
     }
 
     void display() {
-        var keys = map.keySet();
-        Iterator<String> it = keys.iterator();
-
-        while(it.hasNext()) {
-            String name = it.next();
-            Person p = map.get(name);
-            System.out.println(p);
-        }
-
-        System.out.println("Person count: " + map.size());
+        for(var p : list) System.out.println(p);
+        System.out.println("Person count: " + list.size());
     }
 
     void search() {
         System.out.print("Name to search? ");
-        String name = scanner.next();
-        Person p = find(name);
-        if(p != null) System.out.println(p);
+        String find = scanner.next();
+        if(findIndex(find) != -1)
+            System.out.println(list.get(findIndex(find)));
     }
 
     void update() {
         System.out.print("Information to update? ");
-        Person p = find(scanner.next());
+        T p = find(scanner.next());
         if(p != null) {
             p.update(scanner);
         }
@@ -493,52 +495,69 @@ class PersonManager {
 
     void delete() {
         System.out.print("Name to delete? ");
-        String name = scanner.next();
-
-        Person p = map.get(name);
-        if(p != null) map.remove(name);
-        else System.out.println(name + " is NOT found.");
-
+        int idx = findIndex(scanner.next());
+        if(idx == -1) return;
+        list.remove(idx);
     }
-    public Person getNewPerson() {
-        String tag = scanner.next();
-        if (tag.equals("S")) // tag가 "S"
-            return new Student(scanner);
-        else if (tag.equals("W")) // tag가 "W"
-            return new Worker(scanner);
-        else if (tag.equals("SW"))
-            return new StudWork(scanner.nextLine());
-        else {
-            System.out.println(tag + ": WRONG delimiter");
-            scanner.nextLine();
-            return null;
+    public void printNotice(String preMessage, String postMessage) {
+        System.out.print(preMessage);
+        if (factory instanceof PersonFactory)
+            System.out.print("[Person delimiter(S or W or SW)] ");
+        System.out.println("[Person information] "+postMessage);
+    }
+
+    public T getNewPerson() {
+        return factory.newPerson(scanner);
+    }
+    void insert() {
+        int idx=0;
+        T p=null;
+        while(true) {
+            if (list.size() != 0) {
+                System.out.print("Existing name to insert in front? ");
+                String iname = scanner.next();
+                printNotice("", "to insert? ");
+                p = getNewPerson();
+                idx = findIndex(iname);
+            }
+            else {
+                printNotice("", "to insert? ");
+                p = getNewPerson();
+                idx = 0;
+            }
+            if(idx != -1) {
+                if(p == null) {
+                    break;
+                }
+                list.add(idx, p);
+                break;
+            }
+            else    break;
         }
     }
-    void insert() {System.out.println("NOT supported by HashMap or TreeMap.");}
 
     void append() {
-        System.out.println("Continuously input [S or W or SW] [person information to insert], and\n" +
-                "input \"end\" at the end.");
+        printNotice("Continuously input ", "\nto append, and input \"end\" at the end.");
         while(true) {
             if(scanner.hasNext("end")) {
                 scanner.next();
                 break;
             }
-            Person p = getNewPerson();
-            if(p!=null) map.put(p.name, p);
+            T p = getNewPerson();
+            if(p!=null) list.add(p);
         }
     }
 
     void whatDoing() { System.out.print("Name to know about? ");
         String find = scanner.next();
-        if(map.get(find) != null)
-            map.get(find).whatAreYouDoing();
+        if(findIndex(find) != -1)
+            list.get(findIndex(find)).whatAreYouDoing();
     }
 
     public void call() {
         System.out.print("Names of phone caller and callee? ");
-        Person caller = find(scanner.next());
-        Person callee = find(scanner.next());
+        T caller = find(scanner.next());
+        T callee = find(scanner.next());
         if((callee == null) || (caller == null))  {
             scanner.nextLine();
             return;
@@ -549,7 +568,7 @@ class PersonManager {
     public void calculate() {
         System.out.print("Calculator's owner and expression? ");
         String s = scanner.next();
-        Person p = find(s);
+        T p = find(s);
         if (p == null ) {
             scanner.nextLine();
             return;
@@ -559,10 +578,10 @@ class PersonManager {
     }
 
     public void findPerson() {
-        System.out.println("[Delimiter(S or W or SW)] [Person information to find by using equals()]?");
-        Person p = getNewPerson();
+        printNotice("", "to find by using equals()? ");
+        T p = getNewPerson();
         if (p == null)  return;
-        Person fp = find(p.name);
+        T fp = find(p.name);
         if(fp != null) {
             if(fp.equals(p)) {
                 System.out.println(fp.toString());
@@ -573,10 +592,8 @@ class PersonManager {
     }         // 메뉴항목: FindPerson(equals()이용한 사람 찾기)
 
     public void displayPhone() {
-        var keys = map.keySet();
-
-        for (var it : keys)
-            System.out.println(it + ": " + map.get(it).smartPhone.toString());
+        for(var p : list)
+            System.out.println(p.name + ": " + p.smartPhone);
     }       // 메뉴항목: DispAllPhone(모든폰보기)
 
     public void changePhone() {
@@ -593,7 +610,7 @@ class PersonManager {
         }
         System.out.println("Owner name and maker of phone to change(ex: Hong Samsung or Hong Apple)?");
         String n = scanner.next(); String s = scanner.next();
-        Person p = find(n);
+        T p = find(n);
         if(p==null) return;
         if(s.equals("Samsung"))
             p.setSmartPhone(new GalaxyPhone(p.name));
@@ -614,36 +631,43 @@ class PersonManager {
             System.out.print("Seed integer for random number generator? ");
             rnd = new Random(scanner.nextInt());
         }
-
-        var keys = map.keySet();
-
-        for (var it : keys) {
+        for(var p : list) {
             double weight = rnd.nextDouble();
-            map.get(it).weight = Math.round(weight * (60) + 40);
+            p.weight = Math.round(weight * (60) + 40);
         }
         display();
         // 여기에 코드 추가
     }
 
     public void displayStudWorks() {
-
-        var keys = map.keySet();
-
-        for (var it : keys) {
-            if (map.get(it) instanceof StudWork) {
-                ((StudWork) map.get(it)).printStudWork();
+        for(int i=0; i<list.size(); i++) {
+            StudWork SW;
+            if(list.get(i) instanceof StudWork) {
+                SW = (StudWork) list.get(i);
+                SW.printStudWork();
             }
         }
-
     }   // 메뉴항목: DispAllAlba(모든알바생들보기)
 
-    public void sort() {System.out.println("NOT supported by HashMap or TreeMap.");
+    public void sort() {
+        Collections.sort(list);
+        display();
     }                // 메뉴항목: Sort(정렬)
 
-    public void reverse() {System.out.println("NOT supported by HashMap or TreeMap.");
+    public void reverse() {
+        Collections.reverse(list);
+        display();
     }             // 메뉴항목: Reverse(역순배치)
 
-    public void binarySearch() {System.out.println("NOT supported by HashMap or TreeMap.");
+    public void binarySearch() {
+        System.out.print("For binary search, it's needed to sort in advance. Name to search? ");
+        String name = scanner.next();
+        Person p = new Person(name, 0, 0.0);
+        int index = Collections.binarySearch(list, p);
+        if(index >= 0)   {
+            System.out.println(list.get(index));
+        }
+        else System.out.println(name + " is NOT found.");
     }        // 메뉴항목: BinarySearch(이진검색)
 
     final int 종료 = 0, 모두보기 = 1, 검색 = 2, 수정 = 3, 삭제 = 4,
@@ -734,24 +758,123 @@ class PersonManager {
     }
 }
 
+class PersonFactory implements Factory<Person> {
+    // 스캐너를 통해 사용자가 입력한 사람 구분자와 사람 정보를 입력 받은 후
+    // 구분자에 따라 기존처럼 Student, Worker, StudWork 객체를 생성한 후 반환함
+    @Override
+    public Person newPerson(Scanner s) {
+        String tag = s.next();
+        if (tag.equals("S")) // tag가 "S"
+            return new Student(s);
+        else if (tag.equals("W")) // tag가 "W"
+            return new Worker(s);
+        else if (tag.equals("SW"))
+            return new StudWork(s.nextLine());
+        else {
+            System.out.println(tag + ": WRONG delimiter");
+            s.nextLine();
+            return null;
+        }
+    }
+}
+
+class StudentFactory implements Factory<Student> {
+    // 스캐너를 통해 사용자가 지정한 Student 정보를 입력 받은 후 Student 객체를 생성하여 반환함
+    @Override
+    public Student newPerson(Scanner s) { return new Student(s); }
+}
+
+// 위 두 클래스를 참고하여 아래 두 클래스를 완성하라.
+
+class WorkerFactory implements Factory<Worker> {
+    // 스캐너를 통해 사용자가 지정한 Worker 정보를 입력 받은 후 Worker 객체를 생성하여 반환함
+
+    @Override
+    public Worker newPerson(Scanner s) { return new Worker(s); }
+}
+
+class StudWorkFactory implements Factory<StudWork> {
+    // 스캐너를 통해 사용자가 지정한 StudWork 정보를 입력 받은 후 StudWork 객체를 생성하여 반환함
+
+    @Override
+    public StudWork newPerson(Scanner s) {
+        return new StudWork(Factory.getNextLine(s)); }
+}
+
 public class Main {
 
-    public static void main(String[] args) {
+    public static void main(String[] args)
+    {
         Scanner scanner = new Scanner(System.in);
-        Person array[] = {
-                new StudWork("Kang 22 90.1 Computer 3 3.5:true:CU KangNam,Seven Eleven,"
-                        + "GSConvenientStore Suwon:Gwangju city BongSunDong 12 BeonJi"),
-                new StudWork("Sham 20 81.5 Electronics 2 2.1:true:Family Mart,7 11,"
-                        + "GS BookGu:Gwangju city NamGu 12-2"),
-                new StudWork("Jang 21 70.3 Mathematics 4 3.0:false:Seven Eleven:12-3 BeonGil"),
-                new Student("Hong", 10, 64, "Computer", 2, 3.5),
-                new Worker("Mong", 11, 75, "Samsung", "Director"),
-                new Worker("Choon", 12, 45.5, "LG", "DepartmentHead"),
-                new Student("Chung", 13, 46.1, "Physics", 1, 3.8),
-                new Student("Soon", 14, 88.5, "Electronics", 4, 2.5),
+
+        Student students[] = {
+                new Student("Hong",  10, 64,   "Computer",    2, 3.5),
+                new Student("Chung", 11, 46.1, "Physics",     1, 3.8),
+                new Student("Soon",  12, 88.5, "Electronics", 4, 2.5),
         };
-        PersonManager pm = new PersonManager(array, scanner);
-        pm.run();
+        //var studMng = new PersonManager<Student>(students, scanner);
+        var studFact = new StudentFactory();
+        var studMng = new PersonManager<Student>(students, scanner, studFact);
+
+        Worker workers[] = {
+                new Worker ("Hong",  10, 64,   "Samsung", "Director"),
+                new Worker ("Chung", 11, 46.1, "LG",      "DeparmentHead"),
+                new Worker ("Soon",  12, 88.5, "Naver",   "TeamLeader"),
+        };
+        //var workMng = new PersonManager<Worker>(workers, scanner);
+        var workFact = new WorkerFactory();
+        var workMng = new PersonManager<Worker>(workers, scanner, workFact);
+
+        StudWork studWorks[] = {
+                // 중요: StudWork의 기본인적정보의("Kang 22 90.1 Computer 3 3.5") 경우
+                //      문자열 내에 필드구분을 위해 하나의 스페이스만으로 각 필드를 구분해야 함
+                new StudWork("Hong 10 64 Computer 2 3.5:true:CU KangNam,Seven Eleven,GSConvenientStore Suwon:Gwangju city BongSunDong 12 BeonJi"),
+                new StudWork("Chung 11 46.1 Physics 1 3.8:true:Family Mart,7 11,GS BookGu:Gwangju city NamGu 12-2"),
+                new StudWork("Soon 12 88.5 Electronics 4 2.5:false:Seven Eleven:12-3 BeonGil"),
+        };
+        //var studWorkMng = new PersonManager<StudWork>(studWorks, scanner);
+        var studWorkFact = new StudWorkFactory();
+        var studWorkMng = new PersonManager<StudWork>(studWorks, scanner, studWorkFact);
+
+        Person persons[] = {
+                // 중요: StudWork의 기본인적정보의("Kang 22 90.1 Computer 3 3.5") 경우
+                //      문자열 내에 필드구분을 위해 하나의 스페이스만으로 각 필드를 구분해야 함
+                new StudWork("Kang 22 90.1 Computer 3 3.5:true:CU KangNam,Seven Eleven,GSConvenientStore Suwon:Gwangju city BongSunDong 12 BeonJi"),
+                new StudWork("Sham 20 81.5 Electronics 2 2.1:true:Family Mart,7 11,GS BookGu:Gwangju city NamGu 12-2"),
+                new StudWork("Jang 21 70.3 Mathematics 4 3.0:false:Seven Eleven:12-3 BeonGil"),
+                new Student("Hong",  10, 64,   "Computer",    2, 3.5),
+                new Worker ("Mong",  11, 75,   "Samsung",     "Director"),
+                new Worker ("Choon", 12, 45.5, "LG",          "DepartmentHead"),
+                new Student("Chung", 13, 46.1, "Physics",     1, 3.8),
+                new Student("Soon",  14, 88.5, "Electronics", 4, 2.5),
+        };
+        //var personMng = new PersonManager<Person>(persons, scanner);
+        var personFact = new PersonFactory();
+        var personMng = new PersonManager<Person>(persons, scanner, personFact);
+
+        while (true) {
+            System.out.println("Menu: 0.Exit 1.Student 2.Worker 3.StudWork 4.AllKindPerson");
+            System.out.print("Menu item number? ");
+            int idx = scanner.nextInt();
+            if (idx == 0)
+                break;
+            switch (idx) {
+                case 1:  System.out.println("\nPersonManager<Student>");
+                    studMng.run();
+                    break;
+                case 2:  System.out.println("\nPersonManager<Worker>");
+                    workMng.run();
+                    break;
+                case 3:  System.out.println("\nPersonManager<StudWork>");
+                    studWorkMng.run();
+                    break;
+                case 4:  System.out.println("\nPersonManager<Person>");
+                    personMng.run();
+                    break;
+                default: System.out.println("WRONG menu item\n");
+                    break;
+            }
+        }
         scanner.close();
     }
 }
