@@ -4,9 +4,9 @@ import java.util.InputMismatchException;
 import java.util.Scanner;
 
 class Person {
-    private String name;       // 사람 이름
-    private int id;            // Identifier
-    private double weight;     // 체중
+    public String name; // 사람 이름
+    public int id; // Identifier
+    public double weight; // 체중
 
     public void set(String name, int id, double weight) {
         this.name = name;
@@ -25,28 +25,28 @@ class Person {
     public void println() { print(); System.out.println(); }
 
     public void print() {
-        System.out.print(name + ",  ID:" + id + ", W:" + weight);
+        System.out.print(name + ", ID:" + id + ", W:" + weight);
     }
 
-    public String getName() {        return name;    }
-    public int getID() {    return id;  }
-    public double getWeight() { return weight;  }
+    public String getName() { return name; }
+    public int getID() { return id; }
+    public double getWeight() { return weight; }
     public void set(String name) {
         System.out.println("set name: " + name);
-        this.name = name;   }
+        this.name = name; }
     public void set(int id) {
         System.out.println("set id: " + id);
-        this.id = id;   }
+        this.id = id; }
     public void set(double weight) {
         System.out.println("set weight: " + weight);
-        this.weight = weight;   }
+        this.weight = weight; }
 
     public void whatAreYouDoing() {
-        System.out.println(name + "is taking a rest.");
+        System.out.println(name + " is taking a rest.");
     }
 
     public boolean isSame(String name, int id) {
-        if(this.name.equals(name) && (this.id == id))   return true;
+        if(this.name.equals(name) && (this.id == id)) return true;
         return false;
     }
 
@@ -64,7 +64,7 @@ class PersonManager {
     private int count; // persons[] 배열에 실제로 저장된 사람들의 수
 
     PersonManager(Person array[], Scanner scanner) {
-        //MAX_PERSONS개의 원소를 가진 persons 배열을 생성
+//MAX_PERSONS개의 원소를 가진 persons 배열을 생성
         persons = new Person[MAX_PERSONS];
         for (int i = 0; i < array.length; i++) {
             persons[i] = array[i];
@@ -101,11 +101,10 @@ class PersonManager {
     }
 
     void update() {
-        System.out.print("Person information to update? ");
+        System.out.print("Information to update? ");
         Person p = find(scanner.next());
         if(p != null) {
-            p.set(p.getName(), scanner.nextInt(), scanner.nextDouble());
-            System.out.println("Person::update("+ p.getID() +", "+ p.getWeight() +") name:"+ p.getName());
+            p.update(scanner);
         }
         else
             scanner.nextLine();
@@ -119,7 +118,18 @@ class PersonManager {
             persons[i] = persons[i+1];
         count--;
     }
-
+    public Person getNewPerson() {
+        String tag = scanner.next();
+        if (tag.equals("S")) // tag가 "S"
+            return new Student(scanner);
+        else if (tag.equals("W")) // tag가 "W"
+            return new Worker(scanner);
+        else {
+            System.out.println(tag + ": WRONG delimiter");
+            scanner.nextLine();
+            return null;
+        }
+    }
     void insert() {
         int idx=0;
         while(true) {
@@ -127,12 +137,16 @@ class PersonManager {
                 System.out.print("Existing name to insert in front? ");
                 idx = findIndex(scanner.next());
             }
-            if(idx != -1)  {
-                System.out.print("Person information to insert? ");
+            if(idx != -1) {
+                System.out.println("[person delimiter(S or W)] [person information to insert]?");
+                Person p = getNewPerson();
+                if(p == null) {
+                    return;
+                }
                 for(int i=count; i!=idx; i--) {
                     persons[i] = persons[i-1];
                 }
-                persons[idx] = new Person(scanner);
+                persons[idx] = p;
                 count++;
                 break;
             }
@@ -140,33 +154,33 @@ class PersonManager {
     }
 
     void append() {
-        System.out.println("Continuously input person information to insert and input \"end\" at the end.");
+        System.out.println("Continuously input person information to insert, and input \"end\" at the end.");
         while(true) {
             if(scanner.hasNext("end")) {
                 scanner.next();
                 break;
             }
-            persons[count++] = new Person(scanner);
+            persons[count] = getNewPerson();
+            if(persons[count] != null)  count++;
         }
     }
 
-    void whatDoing() {
-        System.out.print("Name to know about? ");
+    void whatDoing() { System.out.print("Name to know about? ");
         String find = scanner.next();
         if(findIndex(find) != -1)
-            System.out.println(persons[findIndex(find)].getName() + " is taking a rest.");
+            persons[findIndex(find)].whatAreYouDoing();
     }
 
     final int 종료 = 0, 모두보기 = 1, 검색 = 2, 수정 = 3, 삭제 = 4,
             삽입 = 5, 추가 = 6, 뭐하니 = 7;
 
     public void run() {
-        System.out.println("PersonManager::run() start");
+        System.out.println("PersonManage::run() start");
         display();
         while (true) {
             System.out.println();
             System.out.println("Menu: 0.Exit 1.DisplayAll 2.Search 3.Update 4.Remove 5.Insert");
-            System.out.println("      6.Append 7.WhatDoing?");
+            System.out.println(" 6.Append 7.WhatDoing?");
             int idx;
             while (true) {
                 System.out.print("Menu item number? ");
@@ -211,47 +225,201 @@ class PersonManager {
         }
     }
 }
+
+class Student extends Person {
+    private String department; // 학과
+    private int year; // 학년
+    private double GPA; // 평균평점
+
+    public void setStudent(String department, int year, double GPA) {
+        this.department = department;
+        this.year = year;
+        this.GPA = GPA;
+        System.out.println("Student::set(" + department +", "+ year +", " + GPA + ")");
+    }
+    public Student(String name, int id, double weight, String department, int year, double GPA) {
+        super(name, id, weight);
+        setStudent(department, year, GPA);
+        System.out.println("Student(" + department +", "+ year +", " + GPA + ")");
+    }
+    public Student(Scanner s) {
+        super(s);
+        setStudent(s.next(), s.nextInt(), s.nextDouble());
+        System.out.println("Student(Scanner s)");
+    }
+    @Override // 부모 클래스인 Person의 whatAreYouDoing() 메소드를 오버라이딩함
+    public void whatAreYouDoing() {
+        study();
+        System.out.println(", ");
+        takeClass();
+    }
+
+    // 새로 추가된 메소드
+    public void study() {
+        System.out.print( name + " is studying as a " + year + "-year student in " + department );
+    }
+    public void takeClass() {
+        System.out.println(name + " took several courses and got GPA " + GPA );
+    }
+
+    @Override
+    public void print() {
+        super.print();
+        System.out.print(", D:" + department + ", Y:" + year + ", GPA:" + GPA);
+    }
+
+    @Override
+    public void update(Scanner s) {
+        super.update(s);
+        setStudent(s.next(), s.nextInt(), s.nextDouble());
+        System.out.println("Student::update("+ id + ", "+ weight + ") name:" + name);
+    }
+}
+
+class Worker extends Person {
+    private String company; // 회사명
+    private String position; // 직급
+
+    public void set(String company, String position) {
+        this.company = company;
+        this.position = position;
+        System.out.println("Worker::set(" + company + ", " + position +")");
+    }
+    public Worker(String name, int id, double weight, String company, String position) {
+        super(name, id, weight);
+        set(company, position);
+        System.out.println("Worker(" + company + ", " + position +")");
+    }
+    public Worker(Scanner s) {
+        super(s);
+        set(s.next(), s.next());
+        System.out.println("Worker(Scanner s)");
+    }
+    // 새로 추가된 메소드
+    public void work() {
+        System.out.print(name + " works in " + company +" as " + position);
+    }
+    public void goOnVacation() {
+        System.out.print(name + " is now enjoying his(her) vacation.");
+    }
+
+    @Override
+    public void update(Scanner s) {
+        super.update(s);
+        set(s.next(), s.next());
+        System.out.println("Worker update(" + company + ", " + position + ") name:" + name);
+
+    }
+
+    @Override
+    public void whatAreYouDoing() {
+        work();
+        System.out.println(", ");
+        goOnVacation();
+        System.out.println();
+    }
+
+    @Override
+    public void print() {
+        super.print();
+        System.out.print(", C:" + company + ", P:" + position);
+    }
+}
+
 public class Main {
 
-    public static void simpleTest1(Scanner s) {
-        System.out.print("Any person information? ");
-        Person p = new Person(s);
+    public static void personTest(Person p) {
+        System.out.println("personTest");
         p.println();
-        System.out.print("Update information(ID, weight) of above person? ");
-        p.update(s);
+        p.whatAreYouDoing();
+
+        System.out.println(p.getName() + "'s ID is " + p.getID() +
+                ", weight is " + p.getWeight() + ".");
+        p.set("Mong");
+        p.set(1);
+        p.set(94.3);
+        p.println();
+        System.out.println("p.isSame(Mong, 1): " + p.isSame("Mong", 1));
+        p.set("Hong", 2, 60);
         p.println();
         System.out.println();
     }
-    public static void simpleTest2(PersonManager pm) {
-        pm.display();
+    public static void studentTest(Scanner scanner) {
+        System.out.println("studentTest");
+        Student sp = new Student("Hong", 0, 71.5, "Computer", 2, 3.5);
+        System.out.println();
+        sp.whatAreYouDoing();
+        Person p = sp; // 업캐스팅
+        p.whatAreYouDoing();
+        System.out.println();
+        sp.println();
+        sp.setStudent("Electronics", 4, 3.5);
+        sp.println();
+        System.out.println();
+        System.out.print("Student information to insert? ");
+        sp = new Student(scanner); // Chung 13 46.1 Literature 1 3.8
+        sp.println();
+        System.out.println();
+        System.out.println("Above student's information(ID weight department year GPA) to upate? ");
+        sp.update(scanner);
+        sp.println();
+        System.out.println();
+        System.out.println(sp.getName() + "'s ID is " + sp.getID() +
+                ", weight is " + sp.getWeight() + ".");
+        sp.set("Mong");
+        sp.set(1);
+        sp.set(94.3);
+        sp.println();
+        System.out.println("sp.isSame(Mong, 1): " + sp.isSame("Mong", 1));
+        sp.set("Hong", 2, 60);
+        sp.setStudent("Electronics", 4, 3.5);
+        sp.println();
+        System.out.println();
+        personTest(sp); // 함수 인자 Up casting
+        p = new Person("Mong", 11, 75);
+        System.out.println();
+        personTest(p);
+    }
+    public static void workerTest(Scanner scanner) {
+        System.out.println("workerTest");
+        Worker wp = new Worker ("Mong", 1, 75, "Samsung", "Director");
+
+        System.out.println();
+        wp.whatAreYouDoing();
+        Person p = wp; // 업캐스팅
+        p.whatAreYouDoing();
         System.out.println();
 
-        String name = "Soon";
-        int idx = pm.findIndex(name);
-        if (idx >= 0) // 사람을 찾은 경우
-            System.out.println(name+"'s index is "+idx);
-        pm.findIndex("KimSooJin"); // findIndex()에서 사람을 못찾은 경우 에러 메시지 출력됨
-
-        Person p = pm.find(name);
-        if (p != null) // 사람을 찾은 경우
-            System.out.println(name+"'s ID is "+p.getID());
-        pm.find("KimJwaJin"); // 사람을 못찾은 경우 findIndex()에 의해 에러 메시지 출력됨
+        wp.println();
+        wp.set("Naver", "Manager");
+        wp.println();
         System.out.println();
+
+        System.out.print("Worker information to insert? ");
+        wp = new Worker(scanner); // Choon 12 45.5 LGElectronics DepartmentHead
+        wp.println();
+        System.out.println();
+
+        System.out.println("Above worker's information(ID weight company job_position) to upate? ");
+        wp.update(scanner); // 12 50.5 LGElectronics Director
+        wp.println();
+        System.out.println();
+        personTest(wp); // 함수 인자 Up casting
     }
 
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
-        simpleTest1(scanner);
+        studentTest(scanner);
+        workerTest(scanner);
         Person fivePersons[] = {
-                new Person("Hong", 0, 64),
-                new Person("Mong", 1, 75),
-                new Person("Choon", 2, 45.5),
-                new Person("Chung", 3, 46.1),
-                new Person("Soon", 4, 88.5)
+                new Student("Hong", 10, 64, "Computer", 2, 3.5),
+                new Worker ("Mong", 11, 75, "Samsung", "Director"),
+                new Worker ("Choon",12, 45.5, "LG", "DepartmentHead"),
+                new Student("Chung",13, 46.1, "Physics", 1, 3.8),
+                new Student("Soon", 14, 88.5, "Electronics",4, 2.5),
         };
         System.out.println();
         PersonManager pm = new PersonManager(fivePersons, scanner);
-        simpleTest2(pm);
         pm.run();
         scanner.close();
     }
