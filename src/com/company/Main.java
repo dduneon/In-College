@@ -1,5 +1,6 @@
 package com.company;
 
+import java.awt.*;
 import java.util.*;
 
 interface Phone {
@@ -169,7 +170,7 @@ class IPhone extends SmartPhone {
     public String getMaker() { return "Apple"; }
 }
 
-class Person {
+class Person implements Comparable<Person>{
     public String name; // 사람 이름
     public int id; // Identifier
     public double weight; // 체중
@@ -179,6 +180,11 @@ class Person {
     public Calculator getCalculator() { return smartPhone; }
     public void setSmartPhone(SmartPhone smartPhone) {
         this.smartPhone = smartPhone;
+    }
+
+    @Override
+    public int compareTo(Person p) {
+        return this.name.compareTo(p.name);
     }
 
     public void set(String name, int id, double weight) {
@@ -420,25 +426,21 @@ class StudWork extends Student {
 }
 class PersonManager {
 
-    private final int MAX_PERSONS = 100;
+    private Vector<Person> vector;
 
     private Scanner scanner;
-    private Person persons[];
-    private int count; // persons[] 배열에 실제로 저장된 사람들의 수
 
     PersonManager(Person array[], Scanner scanner) {
 //MAX_PERSONS개의 원소를 가진 persons 배열을 생성
-        persons = new Person[MAX_PERSONS];
-        for (int i = 0; i < array.length; i++) {
-            persons[i] = array[i];
-        }
         this.scanner = scanner;
-        count = array.length;
+
+        vector = new Vector<Person>();
+        for(var a : array) vector.add(a);
     }
 
     int findIndex(String name) {
-        for(int i=0; i<count; i++) {
-            if(name.equals(persons[i].getName()))
+        for(int i=0; i<vector.size(); i++) {
+            if(name.equals(vector.elementAt(i).getName()))
                 return i;
         }
         System.out.println(name + " is NOT found.");
@@ -447,20 +449,20 @@ class PersonManager {
 
     Person find(String name) {
         int index = findIndex(name);
-        return (index < 0) ? null : persons[index];
+        return (index < 0) ? null : vector.elementAt(index);
     }
 
     void display() {
-        for(int i=0; i<count; i++)
-            System.out.println(persons[i].toString());
-        System.out.println("Person count: " + count);
+        for(int i=0; i<vector.size(); i++)
+            System.out.println(vector.elementAt(i).toString());
+        System.out.println("Person count: " + vector.size());
     }
 
     void search() {
         System.out.print("Name to search? ");
         String find = scanner.next();
         if(findIndex(find) != -1)
-            System.out.println(persons[findIndex(find)].toString());
+            System.out.println(vector.elementAt(findIndex(find)).toString());
     }
 
     void update() {
@@ -477,9 +479,7 @@ class PersonManager {
         System.out.print("Name to delete? ");
         int idx = findIndex(scanner.next());
         if(idx == -1) return;
-        for(int i = idx; i < count; i++)
-            persons[i] = persons[i+1];
-        count--;
+        vector.remove(idx);
     }
     public Person getNewPerson() {
         String tag = scanner.next();
@@ -497,24 +497,28 @@ class PersonManager {
     }
     void insert() {
         int idx=0;
+        Person p=null;
         while(true) {
-            if (count != 0) {
+            if (vector.size() != 0) {
                 System.out.print("Existing name to insert in front? ");
-                idx = findIndex(scanner.next());
+                String iname = scanner.next();
+                System.out.println("[Person delimiter(S or W or SW)] [Person information to insert]?");
+                p = getNewPerson();
+                idx = findIndex(iname);
+            }
+            else {
+                System.out.println("[Person delimiter(S or W or SW)] [Person information to insert]?");
+                p = getNewPerson();
+                idx = 0;
             }
             if(idx != -1) {
-                System.out.println("[Person delimiter(S or W or SW)] [Person information to insert]?");
-                Person p = getNewPerson();
                 if(p == null) {
-                    return;
+                    break;
                 }
-                for(int i=count; i!=idx; i--) {
-                    persons[i] = persons[i-1];
-                }
-                persons[idx] = p;
-                count++;
+                vector.insertElementAt(p, idx);
                 break;
             }
+            else    break;
         }
     }
 
@@ -526,15 +530,15 @@ class PersonManager {
                 scanner.next();
                 break;
             }
-            persons[count] = getNewPerson();
-            if(persons[count] != null)  count++;
+            Person p = getNewPerson();
+            if(p!=null) vector.add(p);
         }
     }
 
     void whatDoing() { System.out.print("Name to know about? ");
         String find = scanner.next();
         if(findIndex(find) != -1)
-            persons[findIndex(find)].whatAreYouDoing();
+            vector.elementAt(findIndex(find)).whatAreYouDoing();
     }
 
     public void call() {
@@ -575,8 +579,8 @@ class PersonManager {
     }         // 메뉴항목: FindPerson(equals()이용한 사람 찾기)
 
     public void displayPhone() {
-        for(int i=0; i<count; i++) {
-            System.out.println(persons[i].name + ": " + persons[i].smartPhone.toString());
+        for(int i=0; i<vector.size(); i++) {
+            System.out.println(vector.elementAt(i).name + ": " + vector.elementAt(i).smartPhone.toString());
         }
     }       // 메뉴항목: DispAllPhone(모든폰보기)
 
@@ -615,26 +619,48 @@ class PersonManager {
             System.out.print("Seed integer for random number generator? ");
             rnd = new Random(scanner.nextInt());
         }
-        for(int i=0; i<count; i++) {
+        for(int i=0; i<vector.size(); i++) {
             double weight = rnd.nextDouble();
-            persons[i].weight = Math.round(weight * (60) + 40);
+            vector.elementAt(i).weight = Math.round(weight * (60) + 40);
         }
         display();
         // 여기에 코드 추가
     }
 
     public void displayStudWorks() {
-        for(int i=0; i<count; i++) {
+        for(int i=0; i<vector.size(); i++) {
             StudWork SW;
-            if(persons[i] instanceof StudWork) {
-                SW = (StudWork) persons[i];
+            if(vector.elementAt(i) instanceof StudWork) {
+                SW = (StudWork) vector.elementAt(i);
                 SW.printStudWork();
             }
         }
     }   // 메뉴항목: DispAllAlba(모든알바생들보기)
 
+    public void sort() {
+        Collections.sort(vector);
+        display();
+    }                // 메뉴항목: Sort(정렬)
+
+    public void reverse() {
+        Collections.reverse(vector);
+        display();
+    }             // 메뉴항목: Reverse(역순배치)
+
+    public void binarySearch() {
+        System.out.print("For binary search, it's needed to sort in advance. Name to search? ");
+        String name = scanner.next();
+        Person p = new Person(name, 0, 0.0);
+        int index = Collections.binarySearch(vector, p);
+        if(index >= 0)   {
+            System.out.println(vector.get(index));
+        }
+        else System.out.println(name + " is NOT found.");
+    }        // 메뉴항목: BinarySearch(이진검색)
+
     final int 종료 = 0, 모두보기 = 1, 검색 = 2, 수정 = 3, 삭제 = 4,
-            삽입 = 5, 추가 = 6, 뭐하니 = 7,전화=8, 계산=9, 사람찾기=10, 모든폰보기=11, 폰변경=12, 자동체중변경=13, 알바생들보기=14;
+            삽입 = 5, 추가 = 6, 뭐하니 = 7,전화=8, 계산=9, 사람찾기=10, 모든폰보기=11, 폰변경=12, 자동체중변경=13, 알바생들보기=14,
+            정렬 = 15, 역순배치 = 16, 이진검색 = 17;
 
     public void run() {
         System.out.println("PersonManage::run() start");
@@ -643,7 +669,8 @@ class PersonManager {
             System.out.println();
             System.out.println("Menu: 0.Exit 1.DisplayAll 2.Search 3.Update 4.Remove 5.Insert");
             System.out.println("\t6.Append 7.WhatDoing? 8.PhoneCall 9.Calculator 10.FindPerson(equals())\n" +
-                    "\t11.DispAllPhone 12.ChangePhone 13.ChangeWeight 14.DispAllAlba");
+                    "\t11.DispAllPhone 12.ChangePhone 13.ChangeWeight 14.DispAllAlba\n" +
+                    "\t15.Sort 16.Reverse 17.BinarySearch\n");
             int idx;
             while (true) {
                 System.out.print("Menu item number? ");
@@ -699,6 +726,15 @@ class PersonManager {
                 case 알바생들보기:
                     displayStudWorks();
                     break;
+                case 정렬:
+                    sort();
+                    break;
+                case 역순배치:
+                    reverse();
+                    break;
+                case 이진검색:
+                    binarySearch();
+                    break;
                 case 종료:
                     System.out.println("PersonManager run() returned\n");
                     return;
@@ -712,214 +748,20 @@ class PersonManager {
 
 public class Main {
 
-    static void StringSpeed(String s) {
-        System.out.println("String Speed");
-        for (int i = 0; i < 20; i++) {
-            String last = s.substring(s.length()-1, s.length()); // 마지막 문자 저장
-            String sub = s.substring(0, s.length()-1); // 처음부터 마지막 문자 앞까지 저장
-            s = sub+last; // 저장된 마지막 문자를 맨 뒤에 다시 추가하여 새로운 문자열을 생성
-            System.out.print(i+" ");
-        }
-        System.out.println("\n");
-    }
-
-    static void StringBufferSpeed(StringBuffer sb) {
-        System.out.println("StringBuffer Speed");
-        for (int i = 0; i < 20; i++) {
-            String last = sb.substring(sb.length()-1, sb.length());// 마지막 문자 저장
-            sb.delete(sb.length()-1, sb.length()); // 마지막 문자 삭제
-            sb.append(last); // 저장된 마지막 문자를 다시 맨 뒤에 추가
-            System.out.print(i+" ");
-        }
-        System.out.println("\n");
-    }
-
-    static void SpeedTest() {
-        String s = "This book is a 명품 Java Programming.";
-        // s 문자열을 반복적으로 계속 두배로 키워 매우 긴 문자열(약 300MB)을 만든다.
-        // 아래 for문의 23 대신 15, 20 등으로 변경해서 짧은 문자열일 경우의 속도도 비교해 보라.
-
-        // 만약 자바시스템의 기본 메모리 크기가 작게 설정되어 있으면
-        // 아래 for문이 메모리 부족으로 죽을 수 있다.
-        // 이 경우 프로그램이 죽지 않을 때까지 23을 계속 하나씩 줄여서 테스트해라.
-        // 죽지 않는 시점의 그 숫자를 23 대신 사용하라.
-        for (int i = 0; i < 22; i++) {
-            s += s;
-            System.out.print(i+" ");
-        }
-        System.out.println("\ns length is "+s.length()/(1024*1024)+" MB\n");
-        StringSpeed(s); // 아래 문장과 순서를 바꾸어도 속도 차이는 있음
-        StringBufferSpeed(new StringBuffer(s));
-    }
-    static void StringRotation(String s) {
-        String book = "book", BOOK = "BOOK", 명품 = "Masterpiece ", Java = "Java";
-        System.out.println("String Rotation: " + s);
-        for (int i = 0; i < 20; i++) {
-            if(s.indexOf(book) >= 0)
-                s = s.replace(book, BOOK);
-            else if(s.indexOf(BOOK) >= 0)
-                s = s.replace(BOOK, book);
-            if(s.indexOf(명품) >= 0) {
-                String start = s.substring(0, s.indexOf(명품));
-                String end = s.substring(s.indexOf(명품) + 명품.length(), s.length());
-                s = start + end;
-            }
-            else {
-                if(s.indexOf(Java) >= 0 ) {
-                    String start = s.substring(0, s.indexOf(Java));
-                    String end = s.substring(s.indexOf(Java), s.length());
-                    s = start + 명품 + end;
-                }
-            }
-
-            String start = s.substring(0, 1);
-            String end = s.substring(1, s.length());
-            s = end + start;
-            System.out.println(((i < 10)? " ": "")+i+" "+s);
-        }
-        System.out.println();
-    }
-
-    static String StringBufferRotation(String s) {
-        String book = "book", BOOK = "BOOK", 명품 = "Masterpiece ", Java = "Java";
-        StringBuffer sb = new StringBuffer(s);
-        System.out.println("StringBuffer Rotation: " + s);
-        for (int i = 0; i < 20; i++) {
-            if (sb.indexOf(book) >= 0)
-                sb = sb.replace(sb.indexOf(book), sb.indexOf(book)+book.length(), BOOK);
-            else if (sb.indexOf(BOOK) >= 0)
-                sb = sb.replace(sb.indexOf(BOOK), sb.indexOf(BOOK)+BOOK.length(), book);
-            if(sb.indexOf(명품) >= 0)
-                sb.delete(sb.indexOf(명품), sb.indexOf(명품) + 명품.length());
-            else
-            if(sb.indexOf(Java) >= 0)
-                sb.insert(sb.indexOf(Java), 명품);
-
-            String del = sb.substring(0, 1);
-            sb.delete(0, 1);
-            sb.append(del);
-            System.out.println(((i < 10)? " ": "")+i+" "+sb);
-        }
-        System.out.println();
-        return sb.toString();
-    }
-
-    static void StringAndStringBufferTest(Scanner scanner) {
-        String s0 = "This book is a Masterpiece Java Programming.";
-        System.out.println("If just [enter], automatic input: " + s0);
-        System.out.println("Simple sentence including 3 words(book, Masterpiece, Java)? ");
-        String s = scanner.nextLine();
-        System.out.println();
-
-        if (!s.equals("")) // 그냥 엔터만 치지 않고 정보를 입력한 후 엔터친 경우
-            s0 = s;        // 사용자가 입력한 문장열로 기존 s0 대체
-        StringRotation(s0);
-        s = StringBufferRotation(s0);
-        System.out.println("StringBufferRotation() returns: "+s+"\n");
-    }
-    static Person p1  = new Person ("Choon", 12, 45.5);
-    static Person sp1 = new Student("Hong",  10, 71.5, "Computer", 2, 3.5);
-    static Person wp1 = new Worker ("Mong",  11, 75,   "Samsung",  "Director");
-
-    static void toStringTest() {
-        // Overriding: toString()
-        System.out.println(p1);
-        System.out.println(sp1);
-        System.out.println(wp1);
-
-        Student s1 = (Student)sp1;
-        Worker  w1 = (Worker)wp1;
-        System.out.println(s1+" "   + "Student: "+1.0);
-        System.out.println(w1+"    "+ "Worker:  "+true);
-        System.out.println();
-    }
-    static void compares(String msg, Person p1, Person p2) {
-        System.out.println(msg + (p1.equals(p2)?  "equals" : "NOT equal"));
-    }
-    /*
-     쉬운 비교을 위해 위 [클래스 및 코드 추가 1-2]의 static 변수를 여기에 복사했음
-     static Person   p1 = new Person ("Choon", 12, 45.5);
-     static Person  sp1 = new Student("Hong",  10, 71.5, "Computer", 2, 3.5);
-     static Person  wp1 = new Worker ("Mong",  11, 75,   "Samsung",  "Director");
-    */
-    static void equalsTest() {
-        Person   p2 = new Person ("Choon", 22, 45.5);
-        Student sp2 = new Student("Hong",  10, 81.5, "Computer", 3, 3.5);
-        Worker  wp2 = new Worker ("Mong",  11, 70.3, "Samsung",  "DepartmentHead");
-        compares("p1 and p2 are ", p1, p2);
-        p2.set(12); // ID 변경
-        compares("p1 and p2 are ", p1, p2);
-        System.out.println();
-        compares("p1 and sp2 are ", p1, sp2);
-        //compares("sp2과 p1는 ", sp2, p1); // 주석을 풀면 프로그램이 죽는 이유는?
-        System.out.println();
-        compares("sp1 and sp2 are ", sp1, sp2);
-        sp2.setStudent("Computer", 2, 3.5);
-        compares("sp1 and sp2 are ", sp1, sp2);
-        System.out.println();
-        compares("wp1 and wp2 are ", wp1, wp2);
-        wp2.set("Samsung", "Director");
-        compares("wp1 and wp2 are ", wp1, wp2);
-        System.out.println();
-    }
-
-    static void StudWorkTest(Person p1, Person p2, Person p3) {
-        StudWork sw1=(StudWork)p1, sw2=(StudWork)p2, sw3=(StudWork)p3;
-        System.out.println("StudentWorker: System.out.println()");
-        System.out.println(sw1);
-        System.out.println(p1);
-        System.out.println(sw2);
-        System.out.println(p2);
-        System.out.println(sw3);
-        System.out.println(p3);
-        System.out.println("\nStudentWorker.printStudWork()");
-        sw1.printStudWork();
-        sw2.printStudWork();
-        sw3.printStudWork();
-    }
-    static void calculatorTest() {
-        Calculator gc = new GalaxyPhone(sp1.getName());
-        Calculator ic = new IPhone(wp1.getName(), "13");
-        // 갤럭시는 연산자와 피연산자가 [하나의 ' '로만] 분리되어 있어야 함
-        gc.calculate("1 + 2");
-        gc.calculate("1 - 2");
-        gc.calculate("1 * 2");
-        gc.calculate("1 / 2");
-        gc.calculate("1 | 2");
-        //gc.calculate("1+2"); // 연산자와 피연산자가 " "로 분리되어 있지 않아 주석을 풀면 프로그램이 죽는다.
-        //gc.calculate("1  +  2"); // 연산자와 피연산자가 두 개의 ' '로 분리되어 있어 주석을 풀면 프로그램이 죽는다.
-        // 두 개의 스페이스로 분리된 "1  +"는 String::split()에 의해 "1", "", "+"로 분리되기 때문이다.
-
-        // IPhone의 경우 연산자와 피연산자가 ' '로 분리되지 않아도 처리할 수 있음
-        ic.calculate("1 + 2");
-        ic.calculate("1- 2");
-        ic.calculate("1 *2");
-        ic.calculate("1/2");
-        ic.calculate("1&2");
-    }
-
     public static void main(String[] args) {
-        //SpeedTest();
         Scanner scanner = new Scanner(System.in);
-        StringAndStringBufferTest(scanner);
-        toStringTest();
-
-        equalsTest();
         Person array[] = {
-                // 중요: StudWork의 경우 문자열 내에 필드구분을 위해 하나의 스페이스만으로 각 필드를 구분해야 함
                 new StudWork("Kang 22 90.1 Computer 3 3.5:true:CU KangNam,Seven Eleven,"
                         + "GS Convenient Store Suwon:Gwangju city BongsunDong 12 BeonJi"),
                 new StudWork("Sham 20 81.5 Electronics 2 2.1:true:Family Mart,7 11,"
                         + "GS BukGu:Gwangju city NamGu 12-2"),
                 new StudWork("Jang 21 70.3 Mathematics 4 3.0:false:Seven Eleven:12-3 BeonGil"),
-                new Student("Hong",  10, 64,   "Computer",    2, 3.5),
-                new Worker ("Mong",  11, 75,   "Samsung",     "Director"),
-                new Worker ("Choon", 12, 45.5, "LG",          "DepartmentHead"),
-                new Student("Chung", 13, 46.1, "Physics",     1, 3.8),
-                new Student("Soon",  14, 88.5, "Electronics", 4, 2.5),
+                new Student("Hong", 10, 64, "Computer", 2, 3.5),
+                new Worker("Mong", 11, 75, "Samsung", "Director"),
+                new Worker("Choon", 12, 45.5, "LG", "DepartmentHead"),
+                new Student("Chung", 13, 46.1, "Physics", 1, 3.8),
+                new Student("Soon", 14, 88.5, "Electronics", 4, 2.5),
         };
-        StudWorkTest(array[0], array[1], array[2]);
-        calculatorTest();
         PersonManager pm = new PersonManager(array, scanner);
         pm.run();
         scanner.close();
