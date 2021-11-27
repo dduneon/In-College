@@ -629,8 +629,37 @@ class FileManager<T extends Person> {
     void textSave()    { textFileSave (factory.getDefaultTextPathName()); }
     // 디폴트 텍스트 파일에서 불러오기
     void textLoard()   { textFileLoard(factory.getDefaultTextPathName()); }
+
+    String getNewFileName(String msg) {
+        displayFileList();
+        System.out.print("New " + msg + " file name to save?");
+        String dir = Factory.HOME_DIR + "/" + scanner.next();
+
+        File f = new File(dir);
+        if(f.exists())  {
+            System.out.println(f.getName() + ": already exists.");
+            return null;
+        }
+        return f.getAbsolutePath();
+    }
+    String getExistingFileName(String preMsg, String postMsg) {
+        File f = getExistingFile(preMsg, postMsg);
+        if (f==null)    return null;
+        return f.getAbsolutePath();
+    }
+
+    void textSaveAs()  {
+        String dir = getNewFileName("text");
+        if(dir != null) textFileSave(dir);
+        return;
+    }	// 텍스트파일새이름저장
+    void textLoardFrom() {
+        String dir = getExistingFileName("text", "load");
+        if(dir != null) textFileLoard(dir);
+        return;
+    }   // 다른텍스트파일불러오기
     private final int 종료=0, 모든항목보기=1, 모든항목삭제=2, 파일목록보기=3, 파일삭제=4, 파일이름변경=5, 파일복사=6
-            , Text저장 = 11, Text불러오기=12;
+            , Text저장 = 11, Text불러오기=12, Text새이름저장=13, Text다른파일불러오기=14;
 
 
     public void run() {
@@ -641,7 +670,7 @@ class FileManager<T extends Person> {
             System.out.println("------------------------- File Management Menu --------------------------------");
             System.out.println("- 0.Exit  1.DisplayAllPerson  2.DeleteAllPerson                               -");
             System.out.println("- 3.FileList 4.RemoveFile 5.RenameFile 6.CopyFile                             -");
-            System.out.println("- 11.SaveDefaultText   12.LoadDefaultText                                     -");
+            System.out.println("- 11.SaveDefaultText   12.LoadDefaultText   13.SaveTextAs   14.LoadTextFrom   -");
             System.out.println("-------------------------------------------------------------------------------");
             int idx;
             while (true) {
@@ -680,6 +709,12 @@ class FileManager<T extends Person> {
                     break;
                 case Text불러오기:
                     textLoard();
+                    break;
+                case Text새이름저장:
+                    textSaveAs();
+                    break;
+                case Text다른파일불러오기:
+                    textLoardFrom();
                     break;
                 case 종료: System.out.println("FileManager run() returned\n"); return;
                 default:  System.out.println("WRONG menu item"); break;
@@ -1034,8 +1069,12 @@ class PersonFactory implements Factory<Person> {
             return null;
         }
     }
+
     @Override
-    public String getDefaultTextPathName() { return HOME_DIR+"/person.txt"; }
+    public String getDefaultTextPathName() {
+        return HOME_DIR + "/person.txt";
+    }
+
     // 텍스트 파일에 저장할 때 사용할 사람 구분자를 반환함
     // 메인 메뉴에서 Student를 선택했을 때는 사람 구분자가 필요 없기 때문에 (모두가 학생 객체이므로)
     // null을 반환함, 즉 사람구분자를 사용하지 않는다는 의미
@@ -1043,9 +1082,13 @@ class PersonFactory implements Factory<Person> {
     public String getTextDelimiter(Person p) {
         if (p instanceof StudWork) // Student보다 StudWork를 먼저 체크해야 함. why?
             return "SW";
-
+        else if (p instanceof Student)
+            return "S";
+        else if (p instanceof Worker)
+            return "W";
+        else    return null;
     }
-
+}
 class StudentFactory implements Factory<Student> {
     // 스캐너를 통해 사용자가 지정한 Student 정보를 입력 받은 후 Student 객체를 생성하여 반환함
     @Override
@@ -1074,7 +1117,6 @@ class WorkerFactory implements Factory<Worker> {
     @Override
     public String getTextDelimiter(Person p) { return null; }
 }
-
 class StudWorkFactory implements Factory<StudWork> {
     // 스캐너를 통해 사용자가 지정한 StudWork 정보를 입력 받은 후 StudWork 객체를 생성하여 반환함
 
@@ -1185,16 +1227,14 @@ class Managers {
         }
     }
 }
-public class Main
-{
+public class Main {
     static void deleteFiles() { // HOME_DIR의 모든 파일을 삭제함
         File files[] = new File(Factory.HOME_DIR).listFiles();
         for (var f: files)
             f.delete();
     }
 
-    public static void main(String[] args)
-    {
+    public static void main(String[] args){
         // deleteFiles(); // 이 주석은 당분간은 유지하라.
         Scanner scanner = new Scanner(System.in);
         Managers.run(scanner);
