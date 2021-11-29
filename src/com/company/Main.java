@@ -541,11 +541,6 @@ class FileManager<T extends Person> {
         String pathname = src.getParent() + "/" + target;
 
         File dst = new File(pathname);
-        if(dst.exists()) {
-            displayFileList();
-            System.out.println(dst.getName() + " already exists");
-            return;
-        }
 
         try {
             FileInputStream fi = new FileInputStream(src);
