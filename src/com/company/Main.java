@@ -1,10 +1,7 @@
 package com.company;
 
 import java.awt.*;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.util.*;
 
 interface Phone {
@@ -240,6 +237,8 @@ class Person implements Comparable<Person>{
         }
         return false;
     }
+
+    public void writeText(PrintStream out) { out.print(name+" "+id+" "+weight); }
 }
 class Student extends Person {
     protected String department; // 학과
@@ -292,6 +291,13 @@ class Student extends Person {
         }
         return false;
     }
+
+    @Override
+    public void writeText(PrintStream out) {
+        super.writeText(out);
+        out.print(" "+department+" "+year+" "+GPA);
+        // 행의 끝을 나타내는 [엔터]는 위 textFileSave(String fileName)에서 삽입함
+    }
 }
 class Worker extends Person {
     private String company; // 회사명
@@ -343,6 +349,12 @@ class Worker extends Person {
             return true;
         }
         return false;
+    }
+    @Override
+    public void writeText(PrintStream out) {
+        super.writeText(out);
+        out.print(" "+company+" "+position);
+        // 행의 끝을 나타내는 [엔터]는 위 textFileSave(String fileName)에서 삽입함
     }
 }
 class StudWork extends Student {
@@ -427,6 +439,15 @@ class StudWork extends Student {
     public void printStudWork() {
         printStudWork(name, Integer.toString(year), Double.toString(GPA), Boolean.toString(married));
     }
+
+    @Override
+    public void writeText(PrintStream out) {
+        super.writeText(out);
+        out.print(":" + married + ":");
+        // 행의 끝을 나타내는 [엔터]는 위 textFileSave(String fileName)에서 삽입함
+        for(int i=0; i<career.length-1; i++)    out.print(career[i] + ",");
+        out.print(career[career.length-1] + ":" + address);
+    }
 }
 
 interface Factory<T>
@@ -444,6 +465,8 @@ interface Factory<T>
         return line;
     }
     String HOME_DIR = "c:/tmp";
+    String getDefaultTextPathName();
+    String getTextDelimiter(Person p);
 }
 
 class FileManager<T extends Person> {
@@ -557,8 +580,87 @@ class FileManager<T extends Person> {
 
         displayFileList();
     }
+    void textFileSave(String fileName) {
+        try {
+            // 기존에 동일한 이름의 파일이 있으면 파일이 열린 후 파일 내용이 모두 삭제됨 (덮어쓰기)
+            var fout = new PrintStream(fileName); // 텍스트 파일을 출력용으로 열기
+            for (T t: list) {
+                String delimiter = factory.getTextDelimiter(t);
+                if (delimiter != null) 		// Main 메뉴에서 4.AllKindPerson을
+                    fout.print(delimiter+" ");	// 선택한 경우 사람 구분자 출력
+                t.writeText(fout); 		// 각 사람 정보를 문자열로 변환하여 출력
+                fout.println(); 		// 행의 끝에 [엔터] 출력
+            }
+            fout.close();
+        }
+        catch (IOException e) { // 파일이 존재하지 않을 경우 발생함
+            System.out.println(fileName+": "+e);
+            return;
+        }
+        displayFileList();
+    }
+    void textFileLoard(String fileName) {
+        FileInputStream fin;
+        try {
+            fin = new FileInputStream(fileName);
+        }
+        catch (IOException e) { // 파일이 존재하지 않을 경우
+            System.out.println(fileName+": "+e);
+            return;
+        }
+        // 키보드가 아닌 파일에서 읽어 들이는 스캐너 생성
+        Scanner sc = new Scanner(fin); // System.in이 아님에 주의
+        list.clear(); // 기존 list에 있는 모든 인적 정보들 삭제(새로 읽어 들이기 위해)
+        while (true) {
+            try { // sc를 통해 파일에서 한 사람의 인적정보 읽어 들인 후 해당 사람객체 생성
+                T p = factory.newPerson(sc);
+                // 메인 메뉴 4.AllKindPerson 항목일 경우 파일에서 사람 구분자가 잘못
+                // 지정된 경우 newPerson(sc)에서 null이 리턴될 수 있음
+                if (p != null)	// 사람 객체가 정상적으로 생성되었으면
+                    list.add(p);// 파일에서 새로 읽어 들인 사람 객체를 list에 추가
+            }
+            catch (NoSuchElementException e) {
+                break;  // 파일 끝까지 다 읽었는데 또 읽으라고 요청하면 이 Exception 발행함
+            }	// 중요: 파일을 정상적으로 다 읽은 후 이 Exception을 이용해 while 문을 빠져 나감
+        }
+        sc.close();
+        display();
+    }
+    // 디폴트 텍스트 파일에 저장
+    void textSave()    { textFileSave (factory.getDefaultTextPathName()); }
+    // 디폴트 텍스트 파일에서 불러오기
+    void textLoard()   { textFileLoard(factory.getDefaultTextPathName()); }
 
-    private final int 종료=0, 모든항목보기=1, 모든항목삭제=2, 파일목록보기=3, 파일삭제=4, 파일이름변경=5, 파일복사=6;
+    String getNewFileName(String msg) {
+        displayFileList();
+        System.out.print("New " + msg + " file name to save?");
+        String dir = Factory.HOME_DIR + "/" + scanner.next();
+
+        File f = new File(dir);
+        if(f.exists())  {
+            System.out.println(f.getName() + ": already exists.");
+            return null;
+        }
+        return f.getAbsolutePath();
+    }
+    String getExistingFileName(String preMsg, String postMsg) {
+        File f = getExistingFile(preMsg, postMsg);
+        if (f==null)    return null;
+        return f.getAbsolutePath();
+    }
+
+    void textSaveAs()  {
+        String dir = getNewFileName("text");
+        if(dir != null) textFileSave(dir);
+        return;
+    }	// 텍스트파일새이름저장
+    void textLoardFrom() {
+        String dir = getExistingFileName("text", "load");
+        if(dir != null) textFileLoard(dir);
+        return;
+    }   // 다른텍스트파일불러오기
+    private final int 종료=0, 모든항목보기=1, 모든항목삭제=2, 파일목록보기=3, 파일삭제=4, 파일이름변경=5, 파일복사=6
+            , Text저장 = 11, Text불러오기=12, Text새이름저장=13, Text다른파일불러오기=14;
 
 
     public void run() {
@@ -569,6 +671,7 @@ class FileManager<T extends Person> {
             System.out.println("------------------------- File Management Menu --------------------------------");
             System.out.println("- 0.Exit  1.DisplayAllPerson  2.DeleteAllPerson                               -");
             System.out.println("- 3.FileList 4.RemoveFile 5.RenameFile 6.CopyFile                             -");
+            System.out.println("- 11.SaveDefaultText   12.LoadDefaultText   13.SaveTextAs   14.LoadTextFrom   -");
             System.out.println("-------------------------------------------------------------------------------");
             int idx;
             while (true) {
@@ -601,6 +704,18 @@ class FileManager<T extends Person> {
                     break;
                 case 파일복사:
                     copy();
+                    break;
+                case Text저장:
+                    textSave();
+                    break;
+                case Text불러오기:
+                    textLoard();
+                    break;
+                case Text새이름저장:
+                    textSaveAs();
+                    break;
+                case Text다른파일불러오기:
+                    textLoardFrom();
                     break;
                 case 종료: System.out.println("FileManager run() returned\n"); return;
                 default:  System.out.println("WRONG menu item"); break;
@@ -955,12 +1070,37 @@ class PersonFactory implements Factory<Person> {
             return null;
         }
     }
-}
 
+    @Override
+    public String getDefaultTextPathName() {
+        return HOME_DIR + "/person.txt";
+    }
+
+    // 텍스트 파일에 저장할 때 사용할 사람 구분자를 반환함
+    // 메인 메뉴에서 Student를 선택했을 때는 사람 구분자가 필요 없기 때문에 (모두가 학생 객체이므로)
+    // null을 반환함, 즉 사람구분자를 사용하지 않는다는 의미
+    @Override
+    public String getTextDelimiter(Person p) {
+        if (p instanceof StudWork) // Student보다 StudWork를 먼저 체크해야 함. why?
+            return "SW";
+        else if (p instanceof Student)
+            return "S";
+        else if (p instanceof Worker)
+            return "W";
+        else    return null;
+    }
+}
 class StudentFactory implements Factory<Student> {
     // 스캐너를 통해 사용자가 지정한 Student 정보를 입력 받은 후 Student 객체를 생성하여 반환함
     @Override
     public Student newPerson(Scanner s) { return new Student(s); }
+    @Override
+    public String getDefaultTextPathName() { return HOME_DIR+"/student.txt"; }
+    // 텍스트 파일에 저장할 때 사용할 사람 구분자를 반환함
+    // 메인 메뉴에서 Student를 선택했을 때는 사람 구분자가 필요 없기 때문에 (모두가 학생 객체이므로)
+    // null을 반환함, 즉 사람구분자를 사용하지 않는다는 의미
+    @Override
+    public String getTextDelimiter(Person p) { return null; }
 }
 
 // 위 두 클래스를 참고하여 아래 두 클래스를 완성하라.
@@ -970,14 +1110,27 @@ class WorkerFactory implements Factory<Worker> {
 
     @Override
     public Worker newPerson(Scanner s) { return new Worker(s); }
+    @Override
+    public String getDefaultTextPathName() { return HOME_DIR+"/worker.txt"; }
+    // 텍스트 파일에 저장할 때 사용할 사람 구분자를 반환함
+    // 메인 메뉴에서 Student를 선택했을 때는 사람 구분자가 필요 없기 때문에 (모두가 학생 객체이므로)
+    // null을 반환함, 즉 사람구분자를 사용하지 않는다는 의미
+    @Override
+    public String getTextDelimiter(Person p) { return null; }
 }
-
 class StudWorkFactory implements Factory<StudWork> {
     // 스캐너를 통해 사용자가 지정한 StudWork 정보를 입력 받은 후 StudWork 객체를 생성하여 반환함
 
     @Override
     public StudWork newPerson(Scanner s) {
         return new StudWork(Factory.getNextLine(s)); }
+    @Override
+    public String getDefaultTextPathName() { return HOME_DIR+"/studwork.txt"; }
+    // 텍스트 파일에 저장할 때 사용할 사람 구분자를 반환함
+    // 메인 메뉴에서 Student를 선택했을 때는 사람 구분자가 필요 없기 때문에 (모두가 학생 객체이므로)
+    // null을 반환함, 즉 사람구분자를 사용하지 않는다는 의미
+    @Override
+    public String getTextDelimiter(Person p) { return null; }
 }
 
 class Managers {
@@ -1075,45 +1228,15 @@ class Managers {
         }
     }
 }
-public class Main
-{
-    /*
-    public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-        Managers.run(scanner);
-        scanner.close();
-    }
-     */
-
-    static void deleteFiles() {
+public class Main {
+    static void deleteFiles() { // HOME_DIR의 모든 파일을 삭제함
         File files[] = new File(Factory.HOME_DIR).listFiles();
         for (var f: files)
             f.delete();
     }
 
-    static void createFile(String filename, int loopCount) {
-        File dst = new File(Factory.HOME_DIR+"/"+filename);
-        try {
-            var fo = new FileOutputStream(dst);
-            byte buf[] = new byte[1024]; // 1KB 버퍼
-            for (int i = 0; i < loopCount; ++i)
-                fo.write(buf);
-            fo.close();
-        }
-        catch (IOException e) {
-            System.out.println(filename+":file creation error: " + e);
-        }
-    }
-
-    static void createFiles() {
-        deleteFiles();
-        createFile("smallfile.dat", 1);  // 1KB
-        createFile("bigfile.dat", 1024); // 1MB
-    }
-
-    public static void main(String[] args)
-    {
-        createFiles();
+    public static void main(String[] args){
+        deleteFiles(); // 이 주석은 당분간은 유지하라.
         Scanner scanner = new Scanner(System.in);
         Managers.run(scanner);
         scanner.close();
