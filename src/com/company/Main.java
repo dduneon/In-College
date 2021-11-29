@@ -350,6 +350,12 @@ class Worker extends Person {
         }
         return false;
     }
+    @Override
+    public void writeText(PrintStream out) {
+        super.writeText(out);
+        out.print(" "+company+" "+position);
+        // 행의 끝을 나타내는 [엔터]는 위 textFileSave(String fileName)에서 삽입함
+    }
 }
 class StudWork extends Student {
     protected boolean married; // 결혼유무
@@ -433,12 +439,12 @@ class StudWork extends Student {
     public void printStudWork() {
         printStudWork(name, Integer.toString(year), Double.toString(GPA), Boolean.toString(married));
     }
+
     @Override
     public void writeText(PrintStream out) {
         super.writeText(out);
-        out.print(" "+department+" "+year+" "+GPA);
+        out.print(":" + married + ":");
         // 행의 끝을 나타내는 [엔터]는 위 textFileSave(String fileName)에서 삽입함
-        out.print(":"+married+":");
         for(int i=0; i<career.length-1; i++)    out.print(career[i] + ",");
         out.print(career[career.length-1] + ":" + address);
     }
@@ -558,11 +564,6 @@ class FileManager<T extends Person> {
         String pathname = src.getParent() + "/" + target;
 
         File dst = new File(pathname);
-        if(dst.exists()) {
-            displayFileList();
-            System.out.println(dst.getName() + " already exists");
-            return;
-        }
 
         try {
             FileInputStream fi = new FileInputStream(src);
@@ -1235,7 +1236,7 @@ public class Main {
     }
 
     public static void main(String[] args){
-        // deleteFiles(); // 이 주석은 당분간은 유지하라.
+        deleteFiles(); // 이 주석은 당분간은 유지하라.
         Scanner scanner = new Scanner(System.in);
         Managers.run(scanner);
         scanner.close();
