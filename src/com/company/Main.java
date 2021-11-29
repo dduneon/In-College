@@ -199,6 +199,10 @@ class Person implements Comparable<Person>{
     public Person(Scanner s) {
         this(s.next(), s.nextInt(), s.nextDouble());
     }
+    public Person(DataInputStream in) throws IOException {
+        // Person 클래스의 세 멤버를 이진 파일에서 읽어 들인 후 기존 생성자를 이용해 객체 초기화시킴
+        this(in.readUTF(), in.readInt(), in.readDouble());
+    }
     //public void println() { print(); System.out.println(); }
 
     //public void print() {System.out.print(name + ", ID:" + id + ", W:" + weight + ", " + smartPhone.getMaker());}
@@ -239,6 +243,10 @@ class Person implements Comparable<Person>{
     }
 
     public void writeText(PrintStream out) { out.print(name+" "+id+" "+weight); }
+    public void writeBinary(DataOutputStream out) throws IOException {
+        // Person 클래스의 세 멤버를 이진 데이타로 출력함
+        out.writeUTF(name); out.writeInt(id); out.writeDouble(weight);
+    }
 }
 class Student extends Person {
     protected String department; // 학과
@@ -257,6 +265,12 @@ class Student extends Person {
     public Student(Scanner s) {
         super(s);
         setStudent(s.next(), s.nextInt(), s.nextDouble());
+    }
+    public Student(DataInputStream in) throws IOException {
+        super(in);
+        this.department = in.readUTF();
+        this.year = in.readInt();
+        this.GPA = in.readDouble();
     }
     @Override // 부모 클래스인 Person의 whatAreYouDoing() 메소드를 오버라이딩함
     public void whatAreYouDoing() {
@@ -298,6 +312,13 @@ class Student extends Person {
         out.print(" "+department+" "+year+" "+GPA);
         // 행의 끝을 나타내는 [엔터]는 위 textFileSave(String fileName)에서 삽입함
     }
+    @Override
+    public void writeBinary(DataOutputStream out) throws IOException {
+        super.writeBinary(out); 	// Person 클래스 멤버 출력
+        out.writeUTF(department);
+        out.writeInt(year);
+        out.writeDouble(GPA);
+    }
 }
 class Worker extends Person {
     private String company; // 회사명
@@ -314,6 +335,11 @@ class Worker extends Person {
     public Worker(Scanner s) {
         super(s);
         set(s.next(), s.next());
+    }
+    public Worker(DataInputStream in) throws IOException {
+        super(in);
+        this.company = in.readUTF();
+        this.position = in.readUTF();
     }
     // 새로 추가된 메소드
     public void work() {
@@ -355,6 +381,12 @@ class Worker extends Person {
         super.writeText(out);
         out.print(" "+company+" "+position);
         // 행의 끝을 나타내는 [엔터]는 위 textFileSave(String fileName)에서 삽입함
+    }
+    @Override
+    public void writeBinary(DataOutputStream out) throws IOException {
+        super.writeBinary(out); 	// Person 클래스 멤버 출력
+        out.writeUTF(company);
+        out.writeUTF(position);
     }
 }
 class StudWork extends Student {
@@ -411,7 +443,14 @@ class StudWork extends Student {
     public StudWork(String args[]) {
         this(args,args[0].split(" "));
     }
-
+    public StudWork(DataInputStream in) throws IOException {
+        super(in);
+        this.married = in.readBoolean();
+        int count = in.readInt();
+        this.career = new String[count];
+        for(int i=0; i<count; i++)  this.career[i] = in.readUTF();
+        this.address = in.readUTF();
+    }
     // 생성자 StudWork(line)의 인자인 line 문자열은 아래처럼 구분자 ":"로 구분해서 지정해 주어야 한다.
     // StudWork("Kang 22 90.1 Computer 3 3.5:true:CU KangNam,Seven Eleven,"
     //        + "GS Convenient Store Suwon:Gwangju city BongsunDong 12 BeonJi")
@@ -448,6 +487,16 @@ class StudWork extends Student {
         for(int i=0; i<career.length-1; i++)    out.print(career[i] + ",");
         out.print(career[career.length-1] + ":" + address);
     }
+    @Override
+    public void writeBinary(DataOutputStream out) throws IOException {
+        super.writeBinary(out); 	// Person 클래스 멤버 출력
+        out.writeBoolean(married);
+        out.writeInt(career.length);
+        for (int i = 0; i < career.length; i++)
+            out.writeUTF(career[i]);
+        out.writeUTF(address);
+    }
+
 }
 
 interface Factory<T>
@@ -467,6 +516,9 @@ interface Factory<T>
     String HOME_DIR = "c:/tmp";
     String getDefaultTextPathName();
     String getTextDelimiter(Person p);
+    String getDefaultBinaryPathName();
+    char   getBinaryDelimiter(Person p);
+    T newPerson(DataInputStream in) throws IOException;
 }
 
 class FileManager<T extends Person> {
@@ -659,8 +711,86 @@ class FileManager<T extends Person> {
         if(dir != null) textFileLoard(dir);
         return;
     }   // 다른텍스트파일불러오기
+    void binaryFileSave(String fileName) {
+        try {
+            // 바이트 단위의 데이타를 실제 파일에 기록하는 객체
+            var fout = new FileOutputStream(fileName);
+            // 8KB 버퍼를 가진 버퍼링 객체:
+            // dout에서 기록된 데이타는 bout에서 보관되며 버퍼를 초과하면 그때 fout에 기록
+            var bout = new BufferedOutputStream(fout);
+            // 각 멤버 변수를 바이트 단위로 쪼개서 bout에 기록
+            var dout = new DataOutputStream(bout); // dout->bout->fout
+            for (T t: list) {
+                char delimiter = factory.getBinaryDelimiter(t);
+                if (delimiter != 0)
+                    dout.writeChar(delimiter);
+                t.writeBinary(dout);
+            }
+            dout.close();  // 자동으로 bout, fout도 close()됨
+        }
+        catch (IOException e) {
+            System.out.println(fileName+": "+e);
+            return;
+        }
+        displayFileList();
+    }
+    void binaryFileLoard(String fileName) {
+        try {
+            // 바이트 단위로 데이타를 파일에서 읽어 들이는 객체
+            var fin = new FileInputStream(fileName);
+            // 8KB 버퍼를 가진 버퍼링 객체:
+            // fin에서 미리 데이터를 읽어 내 버퍼에 저장하고 있으며
+            // 아래 din에서는 이 버퍼에서 읽어감
+            var bin = new BufferedInputStream(fin);
+            // 여러 바이트들을 읽은 후 조합해서 하나의 멤버 변수를 구성한 뒤 반환해 줌
+            var din = new DataInputStream(bin);  // din <- bin <- fin <- 이진파일
+            list.clear(); // 기존 list에 있는 모든 인적 정보들 삭제(새로 읽어 들이기 위해)
+            while (true) {
+                try { // 파일에서 한 사람의 인적정보 읽어 들인 후 해당 사람 객체 생성
+                    T p = factory.newPerson(din);
+                    // 메인 메뉴 4.AllKindPerson 항목일 경우 파일에서 사람 구분자가 잘못
+                    // 지정된 경우 newPerson()에서 null이 리턴될 수 있음
+                    if (p != null)	// 사람 객체가 정상적으로 생성되었으면
+                        list.add(p);// 파일에서 새로 읽어 들인 사람 객체를 list에 추가
+                }
+                catch (EOFException e) {
+                    break; // 파일 끝까지 다 읽었는데 또 읽으라고 요청하면 이 Exception 발행함
+                } // 중요: 파일을 정상적으로 다 읽은 후 이 Exception을 이용해 while 문을 빠져 나감
+            }
+            din.close(); // 자동으로 bin, fin도 close()됨
+        }
+        catch (IOException e) {  // 파일이 존재하지 않을 경우
+            System.out.println(fileName+": "+e);
+            return;
+        }
+        display();  // 읽어 드린 인적정보를 모두 화면에 보여 줌
+    }
+
+    // 디폴트이진파일에 저장
+    void binarySave()  { binaryFileSave(factory.getDefaultBinaryPathName()); }
+
+    // 디폴트이진파일에서 불러오기
+    void binaryLoard() { binaryFileLoard(factory.getDefaultBinaryPathName()); }
+
+    void binarySaveAs()     {		// 이진파일 새이름저장
+        String dir = getNewFileName("binary");
+        if( dir != null)    binaryFileSave(dir);
+        return;
+        // 취소된 경우라면 그냥 리턴하면 됨
+    }
+
+    void binaryLoardAs()     {    	// 다른 이진파일 불러오기
+        String dir = getExistingFileName("binary", "load");
+        if (dir!=null)  binaryFileLoard(dir);
+        return;
+        // 취소된 경우라면 그냥 리턴하면 됨
+    }
+
+
+
     private final int 종료=0, 모든항목보기=1, 모든항목삭제=2, 파일목록보기=3, 파일삭제=4, 파일이름변경=5, 파일복사=6
-            , Text저장 = 11, Text불러오기=12, Text새이름저장=13, Text다른파일불러오기=14;
+            , Text저장 = 11, Text불러오기=12, Text새이름저장=13, Text다른파일불러오기=14,
+            Binary저장=21, Binary불러오기=22, Binary새이름저장=23, Binary다른파일불러오기=24;
 
 
     public void run() {
@@ -672,6 +802,7 @@ class FileManager<T extends Person> {
             System.out.println("- 0.Exit  1.DisplayAllPerson  2.DeleteAllPerson                               -");
             System.out.println("- 3.FileList 4.RemoveFile 5.RenameFile 6.CopyFile                             -");
             System.out.println("- 11.SaveDefaultText   12.LoadDefaultText   13.SaveTextAs   14.LoadTextFrom   -");
+            System.out.println("- 21.SaveDefaultBinary 22.LoadDefaultBinary 23.SaveBinaryAs 24.LoadBinaryFrom -");
             System.out.println("-------------------------------------------------------------------------------");
             int idx;
             while (true) {
@@ -716,6 +847,18 @@ class FileManager<T extends Person> {
                     break;
                 case Text다른파일불러오기:
                     textLoardFrom();
+                    break;
+                case Binary저장:
+                    binarySave();
+                    break;
+                case Binary불러오기:
+                    binaryLoard();
+                    break;
+                case Binary새이름저장:
+                    binarySaveAs();
+                    break;
+                case Binary다른파일불러오기:
+                    binaryLoardAs();
                     break;
                 case 종료: System.out.println("FileManager run() returned\n"); return;
                 default:  System.out.println("WRONG menu item"); break;
@@ -1089,6 +1232,34 @@ class PersonFactory implements Factory<Person> {
             return "W";
         else    return null;
     }
+    @Override
+    public String getDefaultBinaryPathName() {
+        return HOME_DIR + "/person.bin";
+    }
+    @Override
+    public char   getBinaryDelimiter(Person p) {
+        if (p instanceof StudWork) // Student보다 StudWork를 먼저 체크해야 함. why?
+            return 'X';
+        else if (p instanceof Student)
+            return 'S';
+        else if (p instanceof Worker)
+            return 'W';
+        return '\0';
+    }
+    @Override
+    public Person newPerson(DataInputStream in) throws IOException {
+        char tag = in.readChar();
+        if (tag == 'S') // tag가 "S"
+            return new Student(in);
+        else if (tag == 'W') // tag가 "W"
+            return new Worker(in);
+        else if (tag == 'X')
+            return new StudWork(in);
+        else {
+            System.out.println(tag + ": WRONG delimiter");
+            return null;
+        }
+    }
 }
 class StudentFactory implements Factory<Student> {
     // 스캐너를 통해 사용자가 지정한 Student 정보를 입력 받은 후 Student 객체를 생성하여 반환함
@@ -1101,6 +1272,16 @@ class StudentFactory implements Factory<Student> {
     // null을 반환함, 즉 사람구분자를 사용하지 않는다는 의미
     @Override
     public String getTextDelimiter(Person p) { return null; }
+    @Override
+    public String getDefaultBinaryPathName() {
+        return HOME_DIR + "/student.bin";
+    }
+    @Override
+    public char   getBinaryDelimiter(Person p) { return 0; }
+    @Override
+    public Student newPerson(DataInputStream in) throws IOException {
+        return new Student(in);
+    }
 }
 
 // 위 두 클래스를 참고하여 아래 두 클래스를 완성하라.
@@ -1117,6 +1298,16 @@ class WorkerFactory implements Factory<Worker> {
     // null을 반환함, 즉 사람구분자를 사용하지 않는다는 의미
     @Override
     public String getTextDelimiter(Person p) { return null; }
+    @Override
+    public String getDefaultBinaryPathName() {
+        return HOME_DIR + "/worker.bin";
+    }
+    @Override
+    public char   getBinaryDelimiter(Person p) { return 0; }
+    @Override
+    public Worker newPerson(DataInputStream in) throws IOException {
+        return new Worker(in);
+    }
 }
 class StudWorkFactory implements Factory<StudWork> {
     // 스캐너를 통해 사용자가 지정한 StudWork 정보를 입력 받은 후 StudWork 객체를 생성하여 반환함
@@ -1131,6 +1322,16 @@ class StudWorkFactory implements Factory<StudWork> {
     // null을 반환함, 즉 사람구분자를 사용하지 않는다는 의미
     @Override
     public String getTextDelimiter(Person p) { return null; }
+    @Override
+    public String getDefaultBinaryPathName() {
+        return HOME_DIR + "/studwork.bin";
+    }
+    @Override
+    public char   getBinaryDelimiter(Person p) { return 0; }
+    @Override
+    public StudWork newPerson(DataInputStream in) throws IOException {
+        return new StudWork(in);
+    }
 }
 
 class Managers {
